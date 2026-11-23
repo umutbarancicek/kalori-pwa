@@ -34,7 +34,7 @@ export function DailyTotals({ db, date, refreshKey }: DailyTotalsProps) {
   return (
     <div>
       <h2>Günlük Toplam ({date})</h2>
-      {total && <p>{Math.round(total.kcal)} kcal</p>}
+      {total && <p className="kcal-total">{Math.round(total.kcal)} kcal</p>}
       <h3>Geçmiş</h3>
       <ul>
         {history.map((day) => (
