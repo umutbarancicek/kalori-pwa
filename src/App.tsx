@@ -8,6 +8,7 @@ import { DailyTotals } from './components/DailyTotals';
 import { FoodSearch } from './components/FoodSearch';
 import { FreeTextQuickAdd } from './components/FreeTextQuickAdd';
 import { LabelCaptureFlow } from './components/LabelCaptureFlow';
+import { MealTemplates } from './components/MealTemplates';
 import { lookupBarcode } from './domain/barcodeLookup';
 import { fetchProductFromOff } from './lib/offApi';
 
@@ -61,6 +62,7 @@ function App() {
       <h1>Kalori Takip</h1>
       <FreeTextQuickAdd db={db} date={date} onAdded={handleAdded} />
       <FoodSearch db={db} onSelect={setSelectedFood} />
+      <MealTemplates db={db} date={date} onApplied={handleAdded} />
       <button type="button" onClick={() => setScanning(true)}>
         Barkod Tara
       </button>
