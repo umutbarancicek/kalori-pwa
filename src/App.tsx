@@ -2,24 +2,29 @@ import { useEffect, useState } from 'react';
 import { AppDatabase } from './db/database';
 import { upsertFood } from './db/foodRepository';
 import type { Food } from './db/schema';
+import { AboutScreen } from './components/AboutScreen';
 import { AddEntryForm } from './components/AddEntryForm';
 import { BarcodeScanner } from './components/BarcodeScanner';
 import { DailyTotals } from './components/DailyTotals';
+import { ExportImport } from './components/ExportImport';
 import { FoodSearch } from './components/FoodSearch';
 import { FreeTextQuickAdd } from './components/FreeTextQuickAdd';
 import { LabelCaptureFlow } from './components/LabelCaptureFlow';
-import { ExportImport } from './components/ExportImport';
 import { MealTemplates } from './components/MealTemplates';
+import { SettingsScreen } from './components/SettingsScreen';
 import { lookupBarcode } from './domain/barcodeLookup';
 import { fetchProductFromOff } from './lib/offApi';
 
 const db = new AppDatabase();
+
+type View = 'home' | 'settings' | 'about';
 
 function getToday(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
 function App() {
+  const [view, setView] = useState<View>('home');
   const [selectedFood, setSelectedFood] = useState<Food | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [scanning, setScanning] = useState(false);
@@ -61,37 +66,58 @@ function App() {
   return (
     <div>
       <h1>Kalori Takip</h1>
-      <FreeTextQuickAdd db={db} date={date} onAdded={handleAdded} />
-      <FoodSearch db={db} onSelect={setSelectedFood} />
-      <MealTemplates db={db} date={date} onApplied={handleAdded} />
-      <button type="button" onClick={() => setScanning(true)}>
-        Barkod Tara
-      </button>
-      {scanning && (
-        <BarcodeScanner onDetect={handleBarcodeDetected} onClose={() => setScanning(false)} />
-      )}
-      {barcodeMessage && <p role="alert">{barcodeMessage}</p>}
-
-      {visionApiKey ? (
-        <button type="button" onClick={() => setCapturingLabel(true)}>
-          Etiket Fotoğrafından Ekle
+      <nav>
+        <button type="button" onClick={() => setView('home')}>
+          Ana Sayfa
         </button>
-      ) : (
-        <p>Etiket fotoğrafından ekleme için Ayarlar'dan Vision API anahtarını gir.</p>
-      )}
-      {capturingLabel && visionApiKey && (
-        <LabelCaptureFlow
-          visionApiKey={visionApiKey}
-          onSaved={handleLabelSaved}
-          onCancel={() => setCapturingLabel(false)}
-        />
-      )}
+        <button type="button" onClick={() => setView('settings')}>
+          Ayarlar
+        </button>
+        <button type="button" onClick={() => setView('about')}>
+          Hakkında
+        </button>
+      </nav>
 
-      {selectedFood && (
-        <AddEntryForm db={db} food={selectedFood} date={date} onAdded={handleAdded} />
+      {view === 'settings' && (
+        <SettingsScreen db={db} visionApiKey={visionApiKey} onSaved={setVisionApiKey} />
       )}
-      <DailyTotals db={db} date={date} refreshKey={refreshKey} />
-      <ExportImport db={db} />
+      {view === 'about' && <AboutScreen />}
+
+      {view === 'home' && (
+        <>
+          <FreeTextQuickAdd db={db} date={date} onAdded={handleAdded} />
+          <FoodSearch db={db} onSelect={setSelectedFood} />
+          <MealTemplates db={db} date={date} onApplied={handleAdded} />
+          <button type="button" onClick={() => setScanning(true)}>
+            Barkod Tara
+          </button>
+          {scanning && (
+            <BarcodeScanner onDetect={handleBarcodeDetected} onClose={() => setScanning(false)} />
+          )}
+          {barcodeMessage && <p role="alert">{barcodeMessage}</p>}
+
+          {visionApiKey ? (
+            <button type="button" onClick={() => setCapturingLabel(true)}>
+              Etiket Fotoğrafından Ekle
+            </button>
+          ) : (
+            <p>Etiket fotoğrafından ekleme için Ayarlar'dan Vision API anahtarını gir.</p>
+          )}
+          {capturingLabel && visionApiKey && (
+            <LabelCaptureFlow
+              visionApiKey={visionApiKey}
+              onSaved={handleLabelSaved}
+              onCancel={() => setCapturingLabel(false)}
+            />
+          )}
+
+          {selectedFood && (
+            <AddEntryForm db={db} food={selectedFood} date={date} onAdded={handleAdded} />
+          )}
+          <DailyTotals db={db} date={date} refreshKey={refreshKey} />
+          <ExportImport db={db} />
+        </>
+      )}
     </div>
   );
 }
