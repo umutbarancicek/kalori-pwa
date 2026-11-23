@@ -32,9 +32,11 @@ __pycache__/
 
 # Derleme çıktıları
 dist/
+dev-dist/
 build/
 out/
 coverage/
+*.tsbuildinfo
 
 # Geçici dosyalar
 *.tmp
