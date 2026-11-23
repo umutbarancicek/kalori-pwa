@@ -1,0 +1,44 @@
+# İşletim sistemi dosyaları
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editör / IDE
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+
+# Ortam değişkenleri ve gizli bilgiler
+.env
+.env.*
+!.env.example
+
+# Claude Code yerel ayarları
+.claude/settings.local.json
+
+# Loglar
+*.log
+logs/
+
+# Bağımlılıklar
+node_modules/
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+
+# Derleme çıktıları
+dist/
+build/
+out/
+coverage/
+
+# Geçici dosyalar
+*.tmp
+*.bak
+
+# Graphify çıktıları
+graphify-out/
