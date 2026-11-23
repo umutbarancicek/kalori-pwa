@@ -42,3 +42,6 @@ coverage/
 
 # Graphify çıktıları
 graphify-out/
+
+# Superpowers plan execution workspace
+.superpowers/
