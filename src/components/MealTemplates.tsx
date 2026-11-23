@@ -1,15 +1,16 @@
 import { useEffect, useState } from 'react';
 import type { AppDatabase } from '../db/database';
-import type { MealTemplate } from '../db/schema';
+import type { MealTemplate, MealType } from '../db/schema';
 import { applyMealTemplate, saveMealTemplateFromDiary } from '../domain/mealTemplateService';
 
 interface MealTemplatesProps {
   db: AppDatabase;
   date: string;
+  mealType: MealType;
   onApplied: () => void;
 }
 
-export function MealTemplates({ db, date, onApplied }: MealTemplatesProps) {
+export function MealTemplates({ db, date, mealType, onApplied }: MealTemplatesProps) {
   const [templates, setTemplates] = useState<MealTemplate[]>([]);
   const [newTemplateName, setNewTemplateName] = useState('');
 
@@ -28,7 +29,7 @@ export function MealTemplates({ db, date, onApplied }: MealTemplatesProps) {
   }, [db]);
 
   async function handleApply(templateId: string) {
-    await applyMealTemplate(db, templateId, date);
+    await applyMealTemplate(db, templateId, date, mealType);
     onApplied();
   }
 

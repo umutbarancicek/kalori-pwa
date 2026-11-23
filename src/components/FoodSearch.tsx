@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { AppDatabase } from '../db/database';
 import { getFavoritesAndRecents, searchFoods } from '../db/foodRepository';
 import type { Food } from '../db/schema';
+import { resolveQuantityGrams } from '../domain/diaryService';
 import { SourceBadge } from './SourceBadge';
 
 interface FoodSearchProps {
@@ -39,15 +40,22 @@ export function FoodSearch({ db, onSelect }: FoodSearchProps) {
         aria-label="Besin ara"
       />
       <ul>
-        {results.map((food) => (
-          <li key={food.id}>
-            <button type="button" onClick={() => onSelect(food)}>
-              {food.name}
-              {food.lastQuantityGrams ? ` · ${food.lastQuantityGrams} g` : ''}
-            </button>
-            <SourceBadge source={food.source} />
-          </li>
-        ))}
+        {results.map((food) => {
+          const quantity = resolveQuantityGrams(undefined, food);
+          const kcal = Math.round((food.nutrientsPer100g.kcal * quantity) / 100);
+          return (
+            <li key={food.id}>
+              <button type="button" onClick={() => onSelect(food)}>
+                {food.name}
+                <br />
+                <small style={{ color: 'var(--text-muted)' }}>
+                  {kcal} kcal, {quantity} g
+                </small>
+              </button>
+              <SourceBadge source={food.source} />
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

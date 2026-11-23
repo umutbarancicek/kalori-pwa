@@ -59,6 +59,12 @@ describe('mealTemplateService', () => {
     expect(diaryEntries).toHaveLength(2);
   });
 
+  test('şablon belirli bir öğün tipiyle uygulanabilir', async () => {
+    const template = await saveMealTemplate(db, 'Kahvaltı', [{ foodId: 'food-1', quantityGrams: 100 }]);
+    const entries = await applyMealTemplate(db, template.id, '2026-11-23', 'breakfast');
+    expect(entries[0].mealType).toBe('breakfast');
+  });
+
   test('saveMealTemplateFromDiary o günün kayıtlarından, aynı besin tekrarlanırsa miktarları toplayarak şablon oluşturur', async () => {
     await addDiaryEntry(db, 'food-1', 100, '2026-11-23');
     await addDiaryEntry(db, 'food-1', 50, '2026-11-23');

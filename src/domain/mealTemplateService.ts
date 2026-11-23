@@ -1,5 +1,5 @@
 import type { AppDatabase } from '../db/database';
-import type { DiaryEntry, MealTemplate } from '../db/schema';
+import type { DiaryEntry, MealTemplate, MealType } from '../db/schema';
 import { addDiaryEntry } from './diaryService';
 
 export async function saveMealTemplate(
@@ -36,6 +36,7 @@ export async function applyMealTemplate(
   db: AppDatabase,
   templateId: string,
   date: string,
+  mealType: MealType = 'other',
 ): Promise<DiaryEntry[]> {
   const template = await db.mealTemplates.get(templateId);
   if (!template) {
@@ -43,7 +44,7 @@ export async function applyMealTemplate(
   }
   const entries: DiaryEntry[] = [];
   for (const item of template.items) {
-    entries.push(await addDiaryEntry(db, item.foodId, item.quantityGrams, date));
+    entries.push(await addDiaryEntry(db, item.foodId, item.quantityGrams, date, mealType));
   }
   return entries;
 }

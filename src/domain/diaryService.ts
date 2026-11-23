@@ -1,6 +1,8 @@
 import { recordUsage } from '../db/foodRepository';
 import type { AppDatabase } from '../db/database';
-import type { DiaryEntry, Food, Nutrients } from '../db/schema';
+import type { DiaryEntry, Food, MealType, Nutrients } from '../db/schema';
+
+const MEAL_TYPES: MealType[] = ['breakfast', 'lunch', 'dinner', 'snack', 'other'];
 
 const ZERO_NUTRIENTS: Nutrients = {
   kcal: 0,
@@ -49,6 +51,7 @@ export async function addDiaryEntry(
   foodId: string,
   quantityGrams: number,
   date: string,
+  mealType: MealType = 'other',
 ): Promise<DiaryEntry> {
   const food = await db.foods.get(foodId);
   if (!food) {
@@ -61,10 +64,25 @@ export async function addDiaryEntry(
     quantityGrams,
     snapshotNutrients: scaleNutrients(food.nutrientsPer100g, quantityGrams),
     createdAt: Date.now(),
+    mealType,
   };
   await db.diaryEntries.add(entry);
   await recordUsage(db, foodId, quantityGrams);
   return entry;
+}
+
+export async function getEntriesGroupedByMeal(
+  db: AppDatabase,
+  date: string,
+): Promise<Record<MealType, DiaryEntry[]>> {
+  const entries = await db.diaryEntries.where('date').equals(date).toArray();
+  const grouped = Object.fromEntries(
+    MEAL_TYPES.map((type) => [type, [] as DiaryEntry[]]),
+  ) as Record<MealType, DiaryEntry[]>;
+  for (const entry of entries) {
+    grouped[entry.mealType ?? 'other'].push(entry);
+  }
+  return grouped;
 }
 
 export async function getDailyTotal(db: AppDatabase, date: string): Promise<Nutrients> {

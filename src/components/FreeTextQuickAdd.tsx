@@ -3,14 +3,16 @@ import type { AppDatabase } from '../db/database';
 import { searchFoods } from '../db/foodRepository';
 import { addDiaryEntry, resolveQuantityGrams } from '../domain/diaryService';
 import { parseFreeText } from '../domain/freeTextParser';
+import type { MealType } from '../db/schema';
 
 interface FreeTextQuickAddProps {
   db: AppDatabase;
   date: string;
+  mealType: MealType;
   onAdded: () => void;
 }
 
-export function FreeTextQuickAdd({ db, date, onAdded }: FreeTextQuickAddProps) {
+export function FreeTextQuickAdd({ db, date, mealType, onAdded }: FreeTextQuickAddProps) {
   const [input, setInput] = useState('');
   const [error, setError] = useState<string | null>(null);
 
@@ -25,7 +27,7 @@ export function FreeTextQuickAdd({ db, date, onAdded }: FreeTextQuickAddProps) {
       return;
     }
     const quantityGrams = resolveQuantityGrams(parsed.quantityGrams, food);
-    await addDiaryEntry(db, food.id, quantityGrams, date);
+    await addDiaryEntry(db, food.id, quantityGrams, date, mealType);
     setInput('');
     onAdded();
   }

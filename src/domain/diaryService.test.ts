@@ -3,7 +3,13 @@ import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { AppDatabase } from '../db/database';
 import { upsertFood } from '../db/foodRepository';
 import type { Food, Nutrients } from '../db/schema';
-import { addDiaryEntry, getDailyTotal, getHistory, resolveQuantityGrams } from './diaryService';
+import {
+  addDiaryEntry,
+  getDailyTotal,
+  getEntriesGroupedByMeal,
+  getHistory,
+  resolveQuantityGrams,
+} from './diaryService';
 
 const nutrientsPer100g: Nutrients = {
   kcal: 200,
@@ -43,6 +49,49 @@ describe('diaryService', () => {
     const entry = await addDiaryEntry(db, '1', 50, '2026-11-23');
     expect(entry.snapshotNutrients.kcal).toBe(100);
     expect(entry.snapshotNutrients.protein).toBe(5);
+  });
+
+  test('addDiaryEntry öğün tipi verilmezse "other" olarak kaydedilir', async () => {
+    await upsertFood(db, makeFood({ id: '1' }));
+    const entry = await addDiaryEntry(db, '1', 50, '2026-11-23');
+    expect(entry.mealType).toBe('other');
+  });
+
+  test('addDiaryEntry verilen öğün tipini kaydeder', async () => {
+    await upsertFood(db, makeFood({ id: '1' }));
+    const entry = await addDiaryEntry(db, '1', 50, '2026-11-23', 'breakfast');
+    expect(entry.mealType).toBe('breakfast');
+  });
+
+  test('getEntriesGroupedByMeal kayıtları öğün tipine göre gruplar', async () => {
+    await upsertFood(db, makeFood({ id: '1' }));
+    await addDiaryEntry(db, '1', 100, '2026-11-23', 'breakfast');
+    await addDiaryEntry(db, '1', 50, '2026-11-23', 'breakfast');
+    await addDiaryEntry(db, '1', 200, '2026-11-23', 'lunch');
+
+    const grouped = await getEntriesGroupedByMeal(db, '2026-11-23');
+
+    expect(grouped.breakfast).toHaveLength(2);
+    expect(grouped.lunch).toHaveLength(1);
+    expect(grouped.dinner).toHaveLength(0);
+    expect(grouped.snack).toHaveLength(0);
+  });
+
+  test('getEntriesGroupedByMeal öğün tipi olmayan eski kayıtları "other" grubuna koyar', async () => {
+    await upsertFood(db, makeFood({ id: '1' }));
+    await db.diaryEntries.add({
+      id: 'legacy-1',
+      date: '2026-11-23',
+      foodId: '1',
+      quantityGrams: 100,
+      snapshotNutrients: nutrientsPer100g,
+      createdAt: 1,
+      // no mealType — simulates a pre-existing entry from before meal grouping
+    });
+
+    const grouped = await getEntriesGroupedByMeal(db, '2026-11-23');
+
+    expect(grouped.other).toHaveLength(1);
   });
 
   test('addDiaryEntry kullanım bilgisini günceller', async () => {

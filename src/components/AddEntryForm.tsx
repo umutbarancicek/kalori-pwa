@@ -2,21 +2,22 @@ import { useState } from 'react';
 import type { AppDatabase } from '../db/database';
 import { addDiaryEntry } from '../domain/diaryService';
 import { resolveQuantityGrams } from '../domain/diaryService';
-import type { Food } from '../db/schema';
+import type { Food, MealType } from '../db/schema';
 
 interface AddEntryFormProps {
   db: AppDatabase;
   food: Food;
   date: string;
+  mealType: MealType;
   onAdded: () => void;
 }
 
-export function AddEntryForm({ db, food, date, onAdded }: AddEntryFormProps) {
+export function AddEntryForm({ db, food, date, mealType, onAdded }: AddEntryFormProps) {
   const [quantityGrams, setQuantityGrams] = useState(() => resolveQuantityGrams(undefined, food));
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    await addDiaryEntry(db, food.id, quantityGrams, date);
+    await addDiaryEntry(db, food.id, quantityGrams, date, mealType);
     onAdded();
   }
 

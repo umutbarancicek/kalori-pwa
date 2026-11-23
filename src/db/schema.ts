@@ -25,6 +25,8 @@ export interface Food {
   lastUsedAt?: number;
 }
 
+export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'other';
+
 export interface DiaryEntry {
   id: string;
   date: string;
@@ -32,6 +34,8 @@ export interface DiaryEntry {
   quantityGrams: number;
   snapshotNutrients: Nutrients;
   createdAt: number;
+  /** Optional for backward compatibility with entries created before meal grouping existed. */
+  mealType?: MealType;
 }
 
 export interface MealTemplate {
@@ -43,4 +47,25 @@ export interface MealTemplate {
 export interface SettingsEntry {
   key: string;
   value: unknown;
+}
+
+export type Gender = 'male' | 'female';
+export type ActivityLevel = 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active';
+export type WeightGoal = 'lose' | 'maintain' | 'gain';
+
+export interface UserProfile {
+  age: number;
+  weightKg: number;
+  heightCm: number;
+  gender: Gender;
+  activityLevel: ActivityLevel;
+  goal: WeightGoal;
+}
+
+export interface DailyGoal {
+  kcal: number;
+  protein: number;
+  fat: number;
+  carb: number;
+  fiber: number;
 }
