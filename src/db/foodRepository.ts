@@ -29,13 +29,22 @@ async function getSearchIndex(db: AppDatabase): Promise<Fuse<Food>> {
     return cached.fuse;
   }
   const all = await db.foods.toArray();
-  const fuse = new Fuse(all, { keys: ['nameNormalized'], threshold: 0.4 });
+  const fuse = new Fuse(all, {
+    keys: ['nameNormalized'],
+    threshold: 0.3,
+    minMatchCharLength: 2,
+  });
   searchIndexCache.set(db, { count, fuse });
   return fuse;
 }
 
+const MIN_SEARCH_QUERY_LENGTH = 2;
+
 export async function searchFoods(db: AppDatabase, query: string, limit = 20): Promise<Food[]> {
   const normalizedQuery = normalizeTurkish(query);
+  if (normalizedQuery.length < MIN_SEARCH_QUERY_LENGTH) {
+    return [];
+  }
   const fuse = await getSearchIndex(db);
   return fuse
     .search(normalizedQuery)

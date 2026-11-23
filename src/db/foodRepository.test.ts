@@ -74,6 +74,20 @@ describe('foodRepository', () => {
     expect(favorites.map((f) => f.name)).toEqual(['Kullanılmış']);
   });
 
+  test('tek karakterli arama onlarca alakasız sonuç döndürmez', async () => {
+    await upsertFood(db, makeFood({ id: '1', name: 'Sprite' }));
+    await upsertFood(db, makeFood({ id: '2', name: 'Cappy' }));
+    await upsertFood(db, makeFood({ id: '3', name: 'Salam' }));
+    const results = await searchFoods(db, 's');
+    expect(results).toHaveLength(0);
+  });
+
+  test('iki karakterli arama anlamlı sonuçları yine de bulur', async () => {
+    await upsertFood(db, makeFood({ id: '1', name: 'Süt' }));
+    const results = await searchFoods(db, 'sü');
+    expect(results.some((f) => f.name === 'Süt')).toBe(true);
+  });
+
   test('yeni eklenen besin, arama indeksi önbelleklense bile hemen aranabilir olur', async () => {
     await upsertFood(db, makeFood({ id: 'cache-1', name: 'Mercimek Çorbası' }));
     await searchFoods(db, 'mercimek'); // builds/caches the search index
