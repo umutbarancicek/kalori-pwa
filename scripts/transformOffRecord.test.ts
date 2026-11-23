@@ -44,4 +44,14 @@ describe('transformOffRecord', () => {
     };
     expect(transformOffRecord(incomplete)).toBeNull();
   });
+
+  test('ismi ve barkodu olup kalori verisi hiç girilmemiş kayıt null döner', () => {
+    const noCalorieData: OffRawProduct = {
+      code: '8680679340281',
+      product_name: 'Peynir',
+      countries_tags: ['en:turkey'],
+      nutriments: {},
+    };
+    expect(transformOffRecord(noCalorieData)).toBeNull();
+  });
 });

@@ -20,6 +20,11 @@ export function transformOffRecord(raw: OffRawProduct): Food | null {
   if (!raw.product_name || !raw.code) return null;
 
   const n = raw.nutriments ?? {};
+  // Calorie-tracking is useless without an energy value — reject records where
+  // OFF never got real nutrition data filled in, rather than silently storing
+  // all-zero nutrients that would read as "0 kcal" to the user.
+  if (typeof n['energy-kcal_100g'] !== 'number') return null;
+
   return {
     id: raw.code,
     name: raw.product_name,

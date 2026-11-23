@@ -28,6 +28,10 @@ export async function fetchProductFromOff(barcode: string): Promise<Food | null>
     if (data.status !== 1 || !data.product?.product_name) return null;
 
     const n = data.product.nutriments ?? {};
+    // Calorie-tracking is useless without an energy value — treat a product with
+    // no real nutrition data as "not found" rather than returning all zeros.
+    if (typeof n['energy-kcal_100g'] !== 'number') return null;
+
     return {
       id: barcode,
       name: data.product.product_name,

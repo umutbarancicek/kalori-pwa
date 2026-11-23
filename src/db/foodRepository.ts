@@ -60,6 +60,7 @@ export async function recordUsage(
 export async function getFavoritesAndRecents(db: AppDatabase, limit = 10): Promise<Food[]> {
   const all = await db.foods.toArray();
   return all
+    .filter((food) => food.usageCount > 0)
     .sort((a, b) => {
       if (b.usageCount !== a.usageCount) return b.usageCount - a.usageCount;
       return (b.lastUsedAt ?? 0) - (a.lastUsedAt ?? 0);

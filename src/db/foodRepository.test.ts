@@ -67,6 +67,13 @@ describe('foodRepository', () => {
     expect(favorites[0].name).toBe('Ekmek');
   });
 
+  test('getFavoritesAndRecents hiç kullanılmamış (usageCount 0) besinleri listelemez', async () => {
+    await upsertFood(db, makeFood({ id: '1', name: 'Hiç Kullanılmamış', usageCount: 0 }));
+    await upsertFood(db, makeFood({ id: '2', name: 'Kullanılmış', usageCount: 1, lastUsedAt: 1 }));
+    const favorites = await getFavoritesAndRecents(db);
+    expect(favorites.map((f) => f.name)).toEqual(['Kullanılmış']);
+  });
+
   test('yeni eklenen besin, arama indeksi önbelleklense bile hemen aranabilir olur', async () => {
     await upsertFood(db, makeFood({ id: 'cache-1', name: 'Mercimek Çorbası' }));
     await searchFoods(db, 'mercimek'); // builds/caches the search index
