@@ -14,6 +14,8 @@ export type FoodSource = 'bulk' | 'user' | 'verified';
 export interface Food {
   id: string;
   name: string;
+  /** normalizeTurkish(name); populated by foodRepository.upsertFood */
+  nameNormalized?: string;
   brand?: string;
   barcode?: string;
   nutrientsPer100g: Nutrients;
