@@ -47,3 +47,7 @@ graphify-out/
 
 # Superpowers plan execution workspace
 .superpowers/
+
+# Ham/yeniden üretilebilir toplu veri dump'ları (public/data/*.json commit edilir, ham girdi değil)
+off-turkey-raw.jsonl
+usda-foundation-foods.json

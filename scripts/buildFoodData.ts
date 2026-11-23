@@ -1,5 +1,6 @@
 import { createReadStream, promises as fs } from 'node:fs';
 import { createInterface } from 'node:readline';
+import { pathToFileURL } from 'node:url';
 import { gzipSync } from 'node:zlib';
 import type { Food } from '../src/db/schema';
 import { transformOffRecord, type OffRawProduct } from './transformOffRecord';
@@ -115,6 +116,6 @@ async function main() {
   await buildFoodData(offDumpPath, usdaDumpPath, outDir);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main();
 }
