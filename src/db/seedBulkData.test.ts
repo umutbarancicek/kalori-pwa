@@ -84,4 +84,48 @@ describe('seedBulkDataIfNeeded', () => {
     expect(food?.usageCount).toBe(7);
     expect(food?.lastQuantityGrams).toBe(42);
   });
+
+  test('yeni veri setinde artık bulunmayan eski bulk kayıtlar re-seed sırasında silinir', async () => {
+    const fetchBulk = vi.fn().mockResolvedValue([bulkFood('off-1', 'Peynir')]);
+    const fetchGeneric = vi.fn().mockResolvedValue([]);
+
+    await seedBulkDataIfNeeded(db, fetchBulk, fetchGeneric);
+    // Simulate a stale bulk record from a previous (lower-quality) data version
+    // that is no longer present in the new dataset.
+    await upsertFood(db, {
+      id: 'stale-gazoz',
+      name: 'Uludağ gazoz 200',
+      nutrientsPer100g: { ...nutrients, kcal: 0 },
+      source: 'bulk',
+      usageCount: 0,
+    });
+    await db.settings.put({ key: BULK_DATA_VERSION_KEY, value: 0 }); // force re-seed
+
+    await seedBulkDataIfNeeded(db, fetchBulk, fetchGeneric);
+
+    expect(await db.foods.get('stale-gazoz')).toBeUndefined();
+    expect(await db.foods.get('off-1')).toMatchObject({ name: 'Peynir' }); // still-current record untouched
+  });
+
+  test('yeni veri setinde artık bulunmayan ama kullanıcının günlüğüne eklediği (usageCount>0) bulk kayıt yine de silinir', async () => {
+    const fetchBulk = vi.fn().mockResolvedValue([bulkFood('off-1', 'Peynir')]);
+    const fetchGeneric = vi.fn().mockResolvedValue([]);
+
+    await seedBulkDataIfNeeded(db, fetchBulk, fetchGeneric);
+    await upsertFood(db, {
+      id: 'stale-used',
+      name: 'Eski Ürün',
+      nutrientsPer100g: nutrients,
+      source: 'bulk',
+      usageCount: 2,
+      lastUsedAt: 1,
+    });
+    await db.settings.put({ key: BULK_DATA_VERSION_KEY, value: 0 });
+
+    await seedBulkDataIfNeeded(db, fetchBulk, fetchGeneric);
+
+    // Past diary entries keep their own snapshotNutrients, so removing the
+    // stale foods-table row doesn't corrupt history — safe to clean up.
+    expect(await db.foods.get('stale-used')).toBeUndefined();
+  });
 });
