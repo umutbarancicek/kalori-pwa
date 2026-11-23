@@ -12,6 +12,26 @@ export async function saveMealTemplate(
   return template;
 }
 
+export async function saveMealTemplateFromDiary(
+  db: AppDatabase,
+  name: string,
+  date: string,
+): Promise<MealTemplate> {
+  const entries = await db.diaryEntries.where('date').equals(date).toArray();
+  const quantityByFoodId = new Map<string, number>();
+  for (const entry of entries) {
+    quantityByFoodId.set(
+      entry.foodId,
+      (quantityByFoodId.get(entry.foodId) ?? 0) + entry.quantityGrams,
+    );
+  }
+  const items = [...quantityByFoodId.entries()].map(([foodId, quantityGrams]) => ({
+    foodId,
+    quantityGrams,
+  }));
+  return saveMealTemplate(db, name, items);
+}
+
 export async function applyMealTemplate(
   db: AppDatabase,
   templateId: string,

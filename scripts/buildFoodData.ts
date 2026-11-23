@@ -4,29 +4,31 @@ import { gzipSync } from 'node:zlib';
 import type { Food } from '../src/db/schema';
 import { transformOffRecord, type OffRawProduct } from './transformOffRecord';
 
-interface UsdaFoodNutrient {
+export interface UsdaFoodNutrient {
   nutrientName?: string;
+  unitName?: string;
   value?: number;
 }
 
-interface UsdaRawFood {
+export interface UsdaRawFood {
   fdcId?: number | string;
   description?: string;
   foodNutrients?: UsdaFoodNutrient[];
 }
 
 const USDA_NUTRIENT_NAME_MAP: Record<string, keyof Food['nutrientsPer100g']> = {
-  'Energy': 'kcal',
   'Protein': 'protein',
   'Carbohydrate, by difference': 'carb',
   'Sugars, total including NLEA': 'sugar',
   'Total lipid (fat)': 'fat',
   'Fatty acids, total saturated': 'satFat',
   'Fiber, total dietary': 'fiber',
-  'Sodium, Na': 'salt',
 };
 
-function transformUsdaRecord(raw: UsdaRawFood): Food | null {
+// Sodium (mg) -> salt (g): common label conversion is sodium_mg * 2.5 / 1000.
+const SODIUM_MG_TO_SALT_G = 2.5 / 1000;
+
+export function transformUsdaRecord(raw: UsdaRawFood): Food | null {
   if (!raw.description || raw.fdcId === undefined) return null;
   const nutrientsPer100g: Food['nutrientsPer100g'] = {
     kcal: 0,
@@ -39,8 +41,18 @@ function transformUsdaRecord(raw: UsdaRawFood): Food | null {
     salt: 0,
   };
   for (const n of raw.foodNutrients ?? []) {
+    if (typeof n.value !== 'number') continue;
+
+    if (n.nutrientName === 'Energy' && n.unitName?.toUpperCase() === 'KCAL') {
+      nutrientsPer100g.kcal = n.value;
+      continue;
+    }
+    if (n.nutrientName === 'Sodium, Na') {
+      nutrientsPer100g.salt = n.value * SODIUM_MG_TO_SALT_G;
+      continue;
+    }
     const key = n.nutrientName ? USDA_NUTRIENT_NAME_MAP[n.nutrientName] : undefined;
-    if (key && typeof n.value === 'number') {
+    if (key) {
       nutrientsPer100g[key] = n.value;
     }
   }

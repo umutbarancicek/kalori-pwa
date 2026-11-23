@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { AppDatabase } from '../db/database';
 import { exportAllData, importAllData } from '../domain/exportImportService';
+import { getLocalDateString } from '../lib/localDate';
 
 interface ExportImportProps {
   db: AppDatabase;
@@ -16,7 +17,7 @@ export function ExportImport({ db }: ExportImportProps) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `kalori-takip-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `kalori-takip-${getLocalDateString()}.json`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -24,9 +25,17 @@ export function ExportImport({ db }: ExportImportProps) {
   async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    const text = await file.text();
-    await importAllData(db, text, mode);
-    setStatus(`İçe aktarma tamamlandı (${mode === 'overwrite' ? 'üzerine yazıldı' : 'birleştirildi'}).`);
+    try {
+      const text = await file.text();
+      await importAllData(db, text, mode);
+      setStatus(
+        `İçe aktarma tamamlandı (${mode === 'overwrite' ? 'üzerine yazıldı' : 'birleştirildi'}).`,
+      );
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'İçe aktarma başarısız oldu.');
+    } finally {
+      e.target.value = '';
+    }
   }
 
   return (

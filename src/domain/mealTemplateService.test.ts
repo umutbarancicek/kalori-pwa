@@ -2,7 +2,12 @@ import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { AppDatabase } from '../db/database';
 import { upsertFood } from '../db/foodRepository';
 import type { Nutrients } from '../db/schema';
-import { applyMealTemplate, saveMealTemplate } from './mealTemplateService';
+import { addDiaryEntry } from './diaryService';
+import {
+  applyMealTemplate,
+  saveMealTemplateFromDiary,
+  saveMealTemplate,
+} from './mealTemplateService';
 
 const nutrients: Nutrients = {
   kcal: 200,
@@ -52,5 +57,19 @@ describe('mealTemplateService', () => {
     expect(entries.map((e) => e.foodId).sort()).toEqual(['food-1', 'food-2']);
     const diaryEntries = await db.diaryEntries.where('date').equals('2026-11-23').toArray();
     expect(diaryEntries).toHaveLength(2);
+  });
+
+  test('saveMealTemplateFromDiary o günün kayıtlarından, aynı besin tekrarlanırsa miktarları toplayarak şablon oluşturur', async () => {
+    await addDiaryEntry(db, 'food-1', 100, '2026-11-23');
+    await addDiaryEntry(db, 'food-1', 50, '2026-11-23');
+    await addDiaryEntry(db, 'food-2', 30, '2026-11-23');
+    await addDiaryEntry(db, 'food-1', 999, '2026-11-24'); // different day, must be excluded
+
+    const template = await saveMealTemplateFromDiary(db, 'Kahvaltı', '2026-11-23');
+
+    expect(template.items.sort((a, b) => a.foodId.localeCompare(b.foodId))).toEqual([
+      { foodId: 'food-1', quantityGrams: 150 },
+      { foodId: 'food-2', quantityGrams: 30 },
+    ]);
   });
 });

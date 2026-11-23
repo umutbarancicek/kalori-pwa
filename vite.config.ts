@@ -23,6 +23,10 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,json,gz}'],
+        // The bulk food dataset (tens of MB) lives under data/ and is cached lazily
+        // by the CacheFirst runtime rule below on first use — precaching it would
+        // force the service worker to download the whole thing before activating.
+        globIgnores: ['data/**'],
         runtimeCaching: [
           {
             urlPattern: /\/data\/.*\.(json|gz)$/,

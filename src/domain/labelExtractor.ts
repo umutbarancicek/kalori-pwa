@@ -19,6 +19,18 @@ function parseNumbersFromLine(line: string): number[] {
   return matches.map((n) => Number(n.replace(',', '.')));
 }
 
+const NUMBER_BEFORE_KCAL = /(\d+(?:[.,]\d+)?)\s*kcal/gi;
+
+function parseKcalValuesFromLine(line: string): number[] {
+  const matches = [...line.matchAll(NUMBER_BEFORE_KCAL)];
+  if (matches.length === 0) {
+    // No "kcal" unit token present (e.g. "Energy" without kcal label) — fall back to
+    // taking every number on the line, which is the pre-kJ-aware behavior.
+    return parseNumbersFromLine(line);
+  }
+  return matches.map((m) => Number(m[1].replace(',', '.')));
+}
+
 export function extractNutrientsFromLabelText(text: string): ExtractedNutrients {
   const lines = text.split('\n');
   const usedLineIndexes = new Set<number>();
@@ -28,7 +40,8 @@ export function extractNutrientsFromLabelText(text: string): ExtractedNutrients 
     for (let i = 0; i < lines.length; i++) {
       if (usedLineIndexes.has(i) || !pattern.test(lines[i])) continue;
 
-      const numbers = parseNumbersFromLine(lines[i]);
+      const numbers =
+        key === 'kcal' ? parseKcalValuesFromLine(lines[i]) : parseNumbersFromLine(lines[i]);
       if (numbers.length > 0) {
         result[key] = {
           per100g: numbers[0],

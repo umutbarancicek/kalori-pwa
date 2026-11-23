@@ -1,5 +1,3 @@
-import { BrowserMultiFormatReader } from '@zxing/library';
-
 export interface BarcodeStreamHandle {
   stop: () => void;
 }
@@ -12,10 +10,6 @@ interface NativeBarcodeDetectorCtor {
 
 function getNativeBarcodeDetector(): NativeBarcodeDetectorCtor | undefined {
   return (window as unknown as { BarcodeDetector?: NativeBarcodeDetectorCtor }).BarcodeDetector;
-}
-
-export function isNativeBarcodeDetectorAvailable(): boolean {
-  return typeof getNativeBarcodeDetector() !== 'undefined';
 }
 
 export async function startBarcodeScan(
@@ -52,6 +46,9 @@ export async function startBarcodeScan(
     };
   }
 
+  // Loaded only on the fallback path so phones with native BarcodeDetector never
+  // pay ZXing's bundle cost.
+  const { BrowserMultiFormatReader } = await import('@zxing/library');
   const reader = new BrowserMultiFormatReader();
   await reader.decodeFromVideoDevice(null, videoElement, (result) => {
     if (result) {

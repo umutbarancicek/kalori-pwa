@@ -13,15 +13,14 @@ import { LabelCaptureFlow } from './components/LabelCaptureFlow';
 import { MealTemplates } from './components/MealTemplates';
 import { SettingsScreen } from './components/SettingsScreen';
 import { lookupBarcode } from './domain/barcodeLookup';
+import { seedBulkDataIfNeeded } from './db/seedBulkData';
+import { fetchBulkFoodData, fetchGenericFoodData } from './lib/bulkDataSource';
 import { fetchProductFromOff } from './lib/offApi';
+import { getLocalDateString } from './lib/localDate';
 
 const db = new AppDatabase();
 
 type View = 'home' | 'settings' | 'about';
-
-function getToday(): string {
-  return new Date().toISOString().slice(0, 10);
-}
 
 function App() {
   const [view, setView] = useState<View>('home');
@@ -31,12 +30,13 @@ function App() {
   const [barcodeMessage, setBarcodeMessage] = useState<string | null>(null);
   const [capturingLabel, setCapturingLabel] = useState(false);
   const [visionApiKey, setVisionApiKey] = useState<string | null>(null);
-  const date = getToday();
+  const date = getLocalDateString();
 
   useEffect(() => {
     db.settings.get('visionApiKey').then((entry) => {
       if (entry) setVisionApiKey(entry.value as string);
     });
+    seedBulkDataIfNeeded(db, fetchBulkFoodData, fetchGenericFoodData);
   }, []);
 
   function handleAdded() {
@@ -47,14 +47,20 @@ function App() {
   async function handleBarcodeDetected(barcode: string) {
     setScanning(false);
     setBarcodeMessage(null);
-    const result = await lookupBarcode(db, barcode, fetchProductFromOff);
-    if (!result) {
+    try {
+      const result = await lookupBarcode(db, barcode, fetchProductFromOff);
+      if (!result) {
+        setBarcodeMessage(
+          `"${barcode}" barkodu bulunamadı. Etiket fotoğrafı çekebilir veya elle ekleyebilirsin.`,
+        );
+        return;
+      }
+      setSelectedFood(result.food);
+    } catch {
       setBarcodeMessage(
-        `"${barcode}" barkodu bulunamadı. Etiket fotoğrafı çekebilir veya elle ekleyebilirsin.`,
+        `"${barcode}" için arama yapılamadı. Etiket fotoğrafı çekebilir veya elle ekleyebilirsin.`,
       );
-      return;
     }
-    setSelectedFood(result.food);
   }
 
   async function handleLabelSaved(food: Food) {

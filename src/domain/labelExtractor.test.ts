@@ -29,4 +29,18 @@ describe('extractNutrientsFromLabelText', () => {
     expect(() => extractNutrientsFromLabelText(labelTextWithoutSalt)).not.toThrow();
     expect(extractNutrientsFromLabelText(labelTextWithoutSalt).salt).toBeUndefined();
   });
+
+  test('Enerji satırında kJ ve kcal birlikte verilirse kJ değeri kcal olarak alınmaz', () => {
+    const labelWithKj = `Enerji 1050 kJ / 250 kcal 525 kJ / 125 kcal
+Protein 12 g 6 g`;
+    const result = extractNutrientsFromLabelText(labelWithKj);
+    expect(result.kcal?.per100g).toBeCloseTo(250);
+    expect(result.kcal?.perServing).toBeCloseTo(125);
+  });
+
+  test('Sodyum mg biriminde verilirse salt alanına g olarak değil ham değer olarak çağrılan fonksiyon tarafından yorumlanmaz (ham sayı aynen döner)', () => {
+    const labelWithSodiumMg = `Sodyum 400 mg 200 mg`;
+    const result = extractNutrientsFromLabelText(labelWithSodiumMg);
+    expect(result.salt?.per100g).toBeCloseTo(400);
+  });
 });

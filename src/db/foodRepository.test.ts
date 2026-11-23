@@ -66,4 +66,14 @@ describe('foodRepository', () => {
     const favorites = await getFavoritesAndRecents(db);
     expect(favorites[0].name).toBe('Ekmek');
   });
+
+  test('yeni eklenen besin, arama indeksi önbelleklense bile hemen aranabilir olur', async () => {
+    await upsertFood(db, makeFood({ id: 'cache-1', name: 'Mercimek Çorbası' }));
+    await searchFoods(db, 'mercimek'); // builds/caches the search index
+
+    await upsertFood(db, makeFood({ id: 'cache-2', name: 'Tarhana Çorbası' }));
+    const results = await searchFoods(db, 'tarhana');
+
+    expect(results.some((f) => f.id === 'cache-2')).toBe(true);
+  });
 });

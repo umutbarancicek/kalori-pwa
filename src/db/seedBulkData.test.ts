@@ -2,7 +2,7 @@ import 'fake-indexeddb/auto';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { AppDatabase } from './database';
 import { upsertFood } from './foodRepository';
-import { seedBulkDataIfNeeded } from './seedBulkData';
+import { seedBulkDataIfNeeded, BULK_DATA_VERSION_KEY } from './seedBulkData';
 import type { Food, Nutrients } from './schema';
 
 const nutrients: Nutrients = {
@@ -61,5 +61,27 @@ describe('seedBulkDataIfNeeded', () => {
     const userFood = await db.foods.get('user-1');
     expect(userFood?.source).toBe('user');
     expect(userFood?.usageCount).toBe(3);
+  });
+
+  test('versiyon yükseltmesiyle yeniden seed çalışsa bile verified kayıt ve kullanım istatistikleri ezilmez', async () => {
+    const fetchBulk = vi.fn().mockResolvedValue([bulkFood('off-1', 'Peynir')]);
+    const fetchGeneric = vi.fn().mockResolvedValue([]);
+
+    await seedBulkDataIfNeeded(db, fetchBulk, fetchGeneric);
+    await db.foods.update('off-1', {
+      source: 'verified',
+      usageCount: 7,
+      lastQuantityGrams: 42,
+      lastUsedAt: 12345,
+    });
+    // force a re-seed as if a newer bulk data version shipped
+    await db.settings.put({ key: BULK_DATA_VERSION_KEY, value: 0 });
+
+    await seedBulkDataIfNeeded(db, fetchBulk, fetchGeneric);
+
+    const food = await db.foods.get('off-1');
+    expect(food?.source).toBe('verified');
+    expect(food?.usageCount).toBe(7);
+    expect(food?.lastQuantityGrams).toBe(42);
   });
 });

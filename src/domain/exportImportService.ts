@@ -18,12 +18,34 @@ export async function exportAllData(db: AppDatabase): Promise<string> {
   return JSON.stringify(data);
 }
 
+function isValidExportedData(value: unknown): value is ExportedData {
+  if (typeof value !== 'object' || value === null) return false;
+  const candidate = value as Record<string, unknown>;
+  return (
+    Array.isArray(candidate.foods) &&
+    Array.isArray(candidate.diaryEntries) &&
+    Array.isArray(candidate.mealTemplates) &&
+    Array.isArray(candidate.settings)
+  );
+}
+
 export async function importAllData(
   db: AppDatabase,
   json: string,
   mode: 'overwrite' | 'merge',
 ): Promise<void> {
-  const data: ExportedData = JSON.parse(json);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(json);
+  } catch {
+    throw new Error('Geçersiz dosya: JSON olarak okunamadı.');
+  }
+  if (!isValidExportedData(parsed)) {
+    throw new Error(
+      'Geçersiz dosya: beklenen foods/diaryEntries/mealTemplates/settings alanları eksik.',
+    );
+  }
+  const data = parsed;
 
   await db.transaction(
     'rw',

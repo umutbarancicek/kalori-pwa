@@ -21,9 +21,11 @@ export function FoodSearch({ db, onSelect }: FoodSearchProps) {
         : await getFavoritesAndRecents(db);
       if (!cancelled) setResults(foods);
     }
-    load();
+    // Debounce so a fast typist doesn't trigger a Fuse search on every keystroke.
+    const timeoutId = setTimeout(load, 150);
     return () => {
       cancelled = true;
+      clearTimeout(timeoutId);
     };
   }, [db, query]);
 

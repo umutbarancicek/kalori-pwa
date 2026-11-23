@@ -105,4 +105,15 @@ describe('exportImportService', () => {
     expect(importedEntry?.quantityGrams).toBe(40);
     expect(food?.name).toBe('Yeni Peynir');
   });
+
+  test('bozuk JSON içe aktarılırsa anlaşılır bir hata fırlatır, veriyi bozmaz', async () => {
+    await expect(importAllData(db, 'not valid json', 'merge')).rejects.toThrow(
+      /geçersiz|invalid/i,
+    );
+  });
+
+  test('beklenen alanlardan biri eksikse anlaşılır bir hata fırlatır', async () => {
+    const malformed = JSON.stringify({ foods: [] }); // diaryEntries/mealTemplates/settings missing
+    await expect(importAllData(db, malformed, 'merge')).rejects.toThrow(/geçersiz|invalid/i);
+  });
 });
