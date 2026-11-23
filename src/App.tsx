@@ -8,6 +8,7 @@ import { DailyTotals } from './components/DailyTotals';
 import { FoodSearch } from './components/FoodSearch';
 import { FreeTextQuickAdd } from './components/FreeTextQuickAdd';
 import { LabelCaptureFlow } from './components/LabelCaptureFlow';
+import { ExportImport } from './components/ExportImport';
 import { MealTemplates } from './components/MealTemplates';
 import { lookupBarcode } from './domain/barcodeLookup';
 import { fetchProductFromOff } from './lib/offApi';
@@ -90,6 +91,7 @@ function App() {
         <AddEntryForm db={db} food={selectedFood} date={date} onAdded={handleAdded} />
       )}
       <DailyTotals db={db} date={date} refreshKey={refreshKey} />
+      <ExportImport db={db} />
     </div>
   );
 }
