@@ -37,6 +37,8 @@ export interface DiaryEntry {
   createdAt: number;
   /** Optional for backward compatibility with entries created before meal grouping existed. */
   mealType?: MealType;
+  /** Set for entries with no real food (e.g. quick kcal-only entries) to label the row instead of a food name. */
+  label?: string;
 }
 
 export interface MealTemplate {

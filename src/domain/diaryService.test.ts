@@ -5,6 +5,7 @@ import { upsertFood } from '../db/foodRepository';
 import type { Food, Nutrients } from '../db/schema';
 import {
   addDiaryEntry,
+  addQuickKcalEntry,
   copyMealFromDate,
   deleteDiaryEntry,
   getDailyTotal,
@@ -207,5 +208,26 @@ describe('diaryService', () => {
   test('copyMealFromDate kaynakta hiç kayıt yoksa boş dizi döner, hata fırlatmaz', async () => {
     const copied = await copyMealFromDate(db, '2026-11-22', 'breakfast', '2026-11-23');
     expect(copied).toEqual([]);
+  });
+
+  test('addQuickKcalEntry besin seçmeden sadece kcal ile kayıt oluşturur', async () => {
+    const entry = await addQuickKcalEntry(db, 250, '2026-11-23', 'snack');
+    expect(entry.snapshotNutrients.kcal).toBe(250);
+    expect(entry.snapshotNutrients.protein).toBe(0);
+    expect(entry.mealType).toBe('snack');
+    expect(entry.label).toBeTruthy();
+    expect(entry.foodId).toBe('');
+  });
+
+  test('addQuickKcalEntry günlük toplama dahil olur', async () => {
+    await addQuickKcalEntry(db, 250, '2026-11-23');
+    const total = await getDailyTotal(db, '2026-11-23');
+    expect(total.kcal).toBe(250);
+  });
+
+  test('updateDiaryEntryQuantity hızlı kcal kaydının kcal değerini değiştirebilir', async () => {
+    const entry = await addQuickKcalEntry(db, 250, '2026-11-23');
+    const updated = await updateDiaryEntryQuantity(db, entry.id, 300);
+    expect(updated.snapshotNutrients.kcal).toBe(300);
   });
 });

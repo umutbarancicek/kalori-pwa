@@ -71,7 +71,9 @@ function EntryRow({
     <li>
       <SwipeToDeleteRow onDelete={onDelete} onTap={() => setEditing(true)}>
         <span>
-          {entry.quantityGrams} g — {Math.round(entry.snapshotNutrients.kcal)} kcal
+          {entry.label
+            ? `${entry.label} — ${Math.round(entry.snapshotNutrients.kcal)} kcal`
+            : `${entry.quantityGrams} g — ${Math.round(entry.snapshotNutrients.kcal)} kcal`}
         </span>
       </SwipeToDeleteRow>
     </li>

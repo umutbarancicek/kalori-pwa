@@ -2,7 +2,12 @@ import { useEffect, useState } from 'react';
 import type { AppDatabase } from '../db/database';
 import { getFavoritesAndRecents, searchFoods, toggleFavorite, upsertFood } from '../db/foodRepository';
 import type { Food, MealType } from '../db/schema';
-import { addDiaryEntry, copyMealFromDate, getEntriesGroupedByMeal } from '../domain/diaryService';
+import {
+  addDiaryEntry,
+  addQuickKcalEntry,
+  copyMealFromDate,
+  getEntriesGroupedByMeal,
+} from '../domain/diaryService';
 import { lookupBarcode } from '../domain/barcodeLookup';
 import { parseFreeText } from '../domain/freeTextParser';
 import { addDaysToDateString } from '../lib/localDate';
@@ -18,7 +23,7 @@ import {
 import { MealTemplates } from './MealTemplates';
 import { SourceBadge } from './SourceBadge';
 
-type AddMode = 'search' | 'barcode' | 'label' | 'templates';
+type AddMode = 'search' | 'barcode' | 'label' | 'templates' | 'quickKcal';
 
 interface AddScreenProps {
   db: AppDatabase;
@@ -43,6 +48,7 @@ export function AddScreen({
   const [selectedFood, setSelectedFood] = useState<Food | null>(null);
   const [prefillQuantityGrams, setPrefillQuantityGrams] = useState<number | undefined>(undefined);
   const [addedCount, setAddedCount] = useState(0);
+  const [quickKcal, setQuickKcal] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const [yesterdayHasMeal, setYesterdayHasMeal] = useState(false);
   const yesterday = addDaysToDateString(date, -1);
@@ -142,6 +148,15 @@ export function AddScreen({
     setResults((prev) => prev.map((f) => (f.id === foodId ? updated : f)));
   }
 
+  async function handleQuickKcalSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const kcal = Number(quickKcal);
+    if (!kcal || kcal <= 0) return;
+    await addQuickKcalEntry(db, kcal, date, mealType);
+    setAddedCount((c) => c + 1);
+    setQuickKcal('');
+  }
+
   return (
     <div>
       <h2>{MEAL_TYPE_LABELS_DATIVE[mealType]} ekle</h2>
@@ -178,6 +193,13 @@ export function AddScreen({
               onClick={() => setMode('templates')}
             >
               Şablonlar
+            </button>
+            <button
+              type="button"
+              className={mode === 'quickKcal' ? 'active' : ''}
+              onClick={() => setMode('quickKcal')}
+            >
+              Sadece kcal
             </button>
           </div>
 
@@ -243,6 +265,22 @@ export function AddScreen({
               onSaved={handleLabelSaved}
               onCancel={() => setMode('search')}
             />
+          )}
+
+          {mode === 'quickKcal' && (
+            <form className="row-form" onSubmit={handleQuickKcalSubmit}>
+              <input
+                type="number"
+                value={quickKcal}
+                min={1}
+                step="any"
+                placeholder="kcal"
+                aria-label="Hızlı kcal"
+                autoFocus
+                onChange={(e) => setQuickKcal(e.target.value)}
+              />
+              <button type="submit">Ekle</button>
+            </form>
           )}
 
           {mode === 'templates' && (

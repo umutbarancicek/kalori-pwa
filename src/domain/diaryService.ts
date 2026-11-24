@@ -119,6 +119,32 @@ export async function updateDiaryEntryQuantity(
   return updated;
 }
 
+/**
+ * Logs a bare kcal number with no food picked. Stores quantityGrams equal to
+ * the kcal value itself (not grams) so updateDiaryEntryQuantity's existing
+ * ratio-based rescale ("new/old") works unchanged for editing it later,
+ * instead of dividing by a zero quantity.
+ */
+export async function addQuickKcalEntry(
+  db: AppDatabase,
+  kcal: number,
+  date: string,
+  mealType: MealType = 'other',
+): Promise<DiaryEntry> {
+  const entry: DiaryEntry = {
+    id: crypto.randomUUID(),
+    date,
+    foodId: '',
+    quantityGrams: kcal,
+    snapshotNutrients: { ...ZERO_NUTRIENTS, kcal },
+    createdAt: Date.now(),
+    mealType,
+    label: 'Hızlı kcal girişi',
+  };
+  await db.diaryEntries.add(entry);
+  return entry;
+}
+
 const MEAL_TYPE_HOUR_RANGES: { mealType: MealType; startHour: number; endHour: number }[] = [
   { mealType: 'breakfast', startHour: 5, endHour: 11 },
   { mealType: 'lunch', startHour: 11, endHour: 15 },
