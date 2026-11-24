@@ -12,6 +12,7 @@ import {
 import { addDaysToDateString } from '../lib/localDate';
 import { addWaterLog, getWaterTotal, removeLastWaterLog } from '../domain/trackingService';
 import { MacroRing } from './MacroRing';
+import { WeeklyChart } from './WeeklyChart';
 import { MEAL_TYPE_LABELS } from './MealTypeSelect';
 import { SwipeToDeleteRow } from './SwipeToDeleteRow';
 
@@ -275,13 +276,7 @@ export function DiaryScreen({
       </div>
 
       <h3>Son 7 gün</h3>
-      <ul>
-        {history.map((day) => (
-          <li key={day.date}>
-            {day.date}: {Math.round(day.total.kcal)} kcal
-          </li>
-        ))}
-      </ul>
+      <WeeklyChart history={history} goalKcal={goal?.kcal} />
     </div>
   );
 }
