@@ -1,4 +1,5 @@
 import 'fake-indexeddb/auto';
+import Dexie from 'dexie';
 import { afterEach, describe, expect, test } from 'vitest';
 import { AppDatabase } from './database';
 import type { Nutrients } from './schema';
@@ -77,6 +78,52 @@ describe('AppDatabase', () => {
     expect(entry).toMatchObject({ foodId: 'food-1', mealType: 'breakfast' });
     expect(template).toMatchObject({ name: 'Kahvaltı' });
     expect(setting).toMatchObject({ value: 'secret' });
+    reopened.close();
+  });
+
+  test('v1 şemasındaki veri, su/kilo tabloları eklenen v2 kodunda kayıpsız okunur', async () => {
+    // Simulates "yesterday's data under tomorrow's code" for the water/weight
+    // tables added in version 2: open a plain version-1 database (no knowledge
+    // of the new tables at all), seed a food under it, close it, then reopen
+    // with today's AppDatabase (version 2) and confirm the old row survives
+    // and the new tables are present and usable.
+    const v1 = new Dexie('kalori-pwa');
+    v1.version(1).stores({
+      foods: 'id, barcode, name',
+      diaryEntries: 'id, date',
+      mealTemplates: 'id, name',
+      settings: 'key',
+    });
+    await v1.open();
+    await v1.table('foods').add({
+      id: 'food-v1',
+      name: 'Zeytin',
+      nutrientsPer100g: sampleNutrients,
+      source: 'user',
+      usageCount: 0,
+    });
+    v1.close();
+
+    const reopened = new AppDatabase();
+    const food = await reopened.foods.get('food-v1');
+    expect(food).toMatchObject({ name: 'Zeytin' });
+
+    const waterLog = await reopened.waterLogs.add({
+      id: 'water-1',
+      date: '2026-11-24',
+      amountMl: 250,
+      createdAt: Date.now(),
+    });
+    expect(waterLog).toBe('water-1');
+
+    const weightLog = await reopened.weightLogs.add({
+      id: 'weight-1',
+      date: '2026-11-24',
+      weightKg: 70,
+      createdAt: Date.now(),
+    });
+    expect(weightLog).toBe('weight-1');
+
     reopened.close();
   });
 });

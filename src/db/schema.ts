@@ -72,3 +72,17 @@ export interface DailyGoal {
   carb: number;
   fiber: number;
 }
+
+export interface WaterLog {
+  id: string;
+  date: string;
+  amountMl: number;
+  createdAt: number;
+}
+
+export interface WeightLog {
+  id: string;
+  date: string;
+  weightKg: number;
+  createdAt: number;
+}

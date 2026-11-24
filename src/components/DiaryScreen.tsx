@@ -10,6 +10,7 @@ import {
   updateDiaryEntryQuantity,
 } from '../domain/diaryService';
 import { addDaysToDateString } from '../lib/localDate';
+import { addWaterLog, getWaterTotal, removeLastWaterLog } from '../domain/trackingService';
 import { MacroRing } from './MacroRing';
 import { MEAL_TYPE_LABELS } from './MealTypeSelect';
 import { SwipeToDeleteRow } from './SwipeToDeleteRow';
@@ -92,21 +93,24 @@ export function DiaryScreen({
   const [total, setTotal] = useState<Nutrients | null>(null);
   const [grouped, setGrouped] = useState<Record<MealType, DiaryEntry[]> | null>(null);
   const [history, setHistory] = useState<{ date: string; total: Nutrients }[]>([]);
+  const [waterMl, setWaterMl] = useState(0);
   const [pendingUndo, setPendingUndo] = useState<DiaryEntry | null>(null);
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      const [dailyTotal, byMeal, fullHistory] = await Promise.all([
+      const [dailyTotal, byMeal, fullHistory, water] = await Promise.all([
         getDailyTotal(db, date),
         getEntriesGroupedByMeal(db, date),
         getHistory(db),
+        getWaterTotal(db, date),
       ]);
       if (!cancelled) {
         setTotal(dailyTotal);
         setGrouped(byMeal);
         setHistory(fullHistory.slice(-7));
+        setWaterMl(water);
       }
     }
     load();
@@ -140,6 +144,16 @@ export function DiaryScreen({
   async function handleUpdateQuantity(entryId: string, quantityGrams: number) {
     await updateDiaryEntryQuantity(db, entryId, quantityGrams);
     onRefresh();
+  }
+
+  async function handleAddWater(amountMl: number) {
+    await addWaterLog(db, amountMl, date);
+    setWaterMl((w) => w + amountMl);
+  }
+
+  async function handleUndoWater() {
+    await removeLastWaterLog(db, date);
+    setWaterMl(await getWaterTotal(db, date));
   }
 
   return (
@@ -239,6 +253,26 @@ export function DiaryScreen({
             );
           },
         )}
+
+      <div className="card water-card">
+        <h3>Su — {waterMl} ml</h3>
+        <div className="row-form">
+          <button type="button" className="secondary" onClick={() => handleAddWater(200)}>
+            +200 ml
+          </button>
+          <button type="button" className="secondary" onClick={() => handleAddWater(330)}>
+            +330 ml
+          </button>
+          <button type="button" className="secondary" onClick={() => handleAddWater(500)}>
+            +500 ml
+          </button>
+          {waterMl > 0 && (
+            <button type="button" onClick={handleUndoWater} aria-label="Son su kaydını geri al">
+              Geri Al
+            </button>
+          )}
+        </div>
+      </div>
 
       <h3>Son 7 gün</h3>
       <ul>

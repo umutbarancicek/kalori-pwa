@@ -5,6 +5,7 @@ import { AboutScreen } from './AboutScreen';
 import { ExportImport } from './ExportImport';
 import { MealTemplates } from './MealTemplates';
 import { ProfileSettings } from './ProfileSettings';
+import { WeightTracker } from './WeightTracker';
 
 interface SettingsScreenProps {
   db: AppDatabase;
@@ -37,6 +38,10 @@ export function SettingsScreen({
 
       <div className="card">
         <ProfileSettings db={db} profile={profile} onSaved={onProfileSaved} />
+      </div>
+
+      <div className="card">
+        <WeightTracker db={db} />
       </div>
 
       <div className="card">
