@@ -197,6 +197,33 @@ describe('foodRepository', () => {
     expect(results[0].id).toBe('complete');
   });
 
+  test('aynı katmanda markasız/kısa isimli genel ürün, markalı/aromalı üründen önce gelir', async () => {
+    await upsertFood(
+      db,
+      makeFood({ id: 'branded', name: 'Peynir ve baharat aromalı', brand: 'Cheetos' }),
+    );
+    await db.foods.update('branded', { barcode: '1' });
+    await upsertFood(db, makeFood({ id: 'generic', name: 'Beyaz Peynir' }));
+    await db.foods.update('generic', { barcode: '2' });
+
+    const results = await searchFoods(db, 'peynir');
+
+    expect(results[0].id).toBe('generic');
+  });
+
+  test('tam eşleşmeyen çok sayıda markalı sonuç arasında genel ürün 20 sonuç limitinin dışında kalmaz', async () => {
+    for (let i = 0; i < 25; i++) {
+      await upsertFood(db, makeFood({ id: `branded-${i}`, name: `Peynirli Atıştırmalık ${i}`, brand: `Marka${i}` }));
+      await db.foods.update(`branded-${i}`, { barcode: `b${i}` });
+    }
+    await upsertFood(db, makeFood({ id: 'generic', name: 'Beyaz Peynir' }));
+    await db.foods.update('generic', { barcode: 'g1' });
+
+    const results = await searchFoods(db, 'peynir');
+
+    expect(results.some((f) => f.id === 'generic')).toBe(true);
+  });
+
   test('yeterli tam/kelime başı/içerir eşleşmesi yoksa bulanık (fuse) arama son çare olarak devreye girer', async () => {
     await upsertFood(db, makeFood({ id: '1', name: 'Çorba' }));
     const results = await searchFoods(db, 'corbaa'); // one extra letter — no exact/prefix/contains match

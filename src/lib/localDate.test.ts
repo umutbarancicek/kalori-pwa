@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { getLocalDateString } from './localDate';
+import { addDaysToDateString, getLocalDateString } from './localDate';
 
 describe('getLocalDateString', () => {
   test('yerel saat 01:30 iken UTC bir önceki günü göstermemeli', () => {
@@ -11,5 +11,23 @@ describe('getLocalDateString', () => {
   test('tek haneli ay/gün sıfırla doldurulur', () => {
     const date = new Date(2026, 0, 5, 12, 0, 0);
     expect(getLocalDateString(date)).toBe('2026-01-05');
+  });
+});
+
+describe('addDaysToDateString', () => {
+  test('bir gün ileri alır', () => {
+    expect(addDaysToDateString('2026-11-23', 1)).toBe('2026-11-24');
+  });
+
+  test('bir gün geri alır', () => {
+    expect(addDaysToDateString('2026-11-23', -1)).toBe('2026-11-22');
+  });
+
+  test('ay sonunu doğru taşır', () => {
+    expect(addDaysToDateString('2026-11-30', 1)).toBe('2026-12-01');
+  });
+
+  test('yıl sonunu doğru taşır', () => {
+    expect(addDaysToDateString('2026-12-31', 1)).toBe('2027-01-01');
   });
 });

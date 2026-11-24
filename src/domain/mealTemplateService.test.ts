@@ -5,6 +5,7 @@ import type { Nutrients } from '../db/schema';
 import { addDiaryEntry } from './diaryService';
 import {
   applyMealTemplate,
+  deleteMealTemplate,
   saveMealTemplateFromDiary,
   saveMealTemplate,
 } from './mealTemplateService';
@@ -77,5 +78,15 @@ describe('mealTemplateService', () => {
       { foodId: 'food-1', quantityGrams: 150 },
       { foodId: 'food-2', quantityGrams: 30 },
     ]);
+  });
+
+  test('deleteMealTemplate şablonu kaldırır', async () => {
+    const template = await saveMealTemplate(db, 'Kahvaltı', [
+      { foodId: 'food-1', quantityGrams: 100 },
+    ]);
+
+    await deleteMealTemplate(db, template.id);
+
+    expect(await db.mealTemplates.get(template.id)).toBeUndefined();
   });
 });

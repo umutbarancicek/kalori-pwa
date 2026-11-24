@@ -56,13 +56,34 @@ function completenessScore(n: Nutrients): number {
   return Object.values(n).filter((value) => value !== 0).length;
 }
 
-/** Lower is better: exact name match ranks above a prefix match, above a substring match. */
-type MatchTier = 0 | 1 | 2 | 3;
+// A higher score means "more likely to be what a reasonable person meant by
+// a plain query" — an unbranded, plainly-named staple (e.g. "Beyaz Peynir")
+// over a branded/flavored variant (e.g. "Peynir ve baharat aromalı" · Cheetos),
+// which otherwise ranks identically within the same match tier and would be
+// drowned out by however many branded duplicates a scraped dataset happens
+// to contain for that word.
+function genericnessScore(food: Food): number {
+  const unbrandedBonus = food.brand ? 0 : 2;
+  const wordCount = food.name.trim().split(/\s+/).filter(Boolean).length;
+  const shortNameBonus = Math.max(0, 4 - wordCount);
+  return unbrandedBonus + shortNameBonus;
+}
+
+/**
+ * Lower is better. A query that exactly matches one whole word in the name
+ * (tier 1) ranks above a query that merely matches the start of a longer name
+ * character-for-character (tier 2) — otherwise "Peynir ve baharat aromalı"
+ * (query is a character-prefix of the whole string) would outrank "Beyaz
+ * Peynir" (query exactly matches a word, but not at position 0), which is
+ * backwards from what a person searching "peynir" wants.
+ */
+type MatchTier = 0 | 1 | 2 | 3 | 4;
 
 function directMatchTier(nameNormalized: string, normalizedQuery: string): MatchTier | null {
   if (nameNormalized === normalizedQuery) return 0;
-  if (nameNormalized.startsWith(normalizedQuery)) return 1;
-  if (nameNormalized.includes(normalizedQuery)) return 2;
+  if (nameNormalized.split(/\s+/).includes(normalizedQuery)) return 1;
+  if (nameNormalized.startsWith(normalizedQuery)) return 2;
+  if (nameNormalized.includes(normalizedQuery)) return 3;
   return null;
 }
 
@@ -106,7 +127,7 @@ export async function searchFoods(db: AppDatabase, query: string, limit = 20): P
       : fuse
           .search(normalizedQuery)
           .filter((result) => candidateIds.has(result.item.id))
-          .map((result, fuseRank) => ({ food: result.item, tier: 3 as const, fuseRank }));
+          .map((result, fuseRank) => ({ food: result.item, tier: 4 as const, fuseRank }));
 
   // Dedup records that share a normalized name (common in scraped data: casing
   // variants, re-submitted duplicates) down to the single best representative.
@@ -126,8 +147,10 @@ export async function searchFoods(db: AppDatabase, query: string, limit = 20): P
 
   deduped.sort((a, b) => {
     if (a.tier !== b.tier) return a.tier - b.tier;
-    if (a.tier === 3) return a.fuseRank - b.fuseRank; // preserve Fuse's own relevance order
+    if (a.tier === 4) return a.fuseRank - b.fuseRank; // preserve Fuse's own relevance order
     if (b.food.usageCount !== a.food.usageCount) return b.food.usageCount - a.food.usageCount;
+    const genericnessDiff = genericnessScore(b.food) - genericnessScore(a.food);
+    if (genericnessDiff !== 0) return genericnessDiff;
     return (b.food.lastUsedAt ?? 0) - (a.food.lastUsedAt ?? 0);
   });
 

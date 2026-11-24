@@ -1,16 +1,23 @@
 import { useEffect, useState } from 'react';
 import type { AppDatabase } from '../db/database';
 import type { MealTemplate, MealType } from '../db/schema';
-import { applyMealTemplate, saveMealTemplateFromDiary } from '../domain/mealTemplateService';
+import {
+  applyMealTemplate,
+  deleteMealTemplate,
+  saveMealTemplateFromDiary,
+} from '../domain/mealTemplateService';
+import { getLocalDateString } from '../lib/localDate';
 
 interface MealTemplatesProps {
   db: AppDatabase;
-  date: string;
-  mealType: MealType;
-  onApplied: () => void;
+  /** 'manage': create/delete only (Ayarlar). 'apply': pick one to add to today's meal (Ekle). */
+  mode: 'manage' | 'apply';
+  date?: string;
+  mealType?: MealType;
+  onApplied?: (itemCount: number) => void;
 }
 
-export function MealTemplates({ db, date, mealType, onApplied }: MealTemplatesProps) {
+export function MealTemplates({ db, mode, date, mealType, onApplied }: MealTemplatesProps) {
   const [templates, setTemplates] = useState<MealTemplate[]>([]);
   const [newTemplateName, setNewTemplateName] = useState('');
 
@@ -29,21 +36,26 @@ export function MealTemplates({ db, date, mealType, onApplied }: MealTemplatesPr
   }, [db]);
 
   async function handleApply(templateId: string) {
-    await applyMealTemplate(db, templateId, date, mealType);
-    onApplied();
+    const entries = await applyMealTemplate(db, templateId, date ?? getLocalDateString(), mealType);
+    onApplied?.(entries.length);
+  }
+
+  async function handleDelete(templateId: string) {
+    await deleteMealTemplate(db, templateId);
+    await refresh();
   }
 
   async function handleSaveToday(e: React.FormEvent) {
     e.preventDefault();
     if (!newTemplateName.trim()) return;
-    await saveMealTemplateFromDiary(db, newTemplateName.trim(), date);
+    await saveMealTemplateFromDiary(db, newTemplateName.trim(), getLocalDateString());
     setNewTemplateName('');
     await refresh();
   }
 
   return (
     <div>
-      <h2>Öğün Şablonları</h2>
+      <h2>Öğün Şablonlarım</h2>
       {templates.length > 0 && (
         <ul>
           {templates.map((template) => (
@@ -51,22 +63,29 @@ export function MealTemplates({ db, date, mealType, onApplied }: MealTemplatesPr
               <button type="button" onClick={() => handleApply(template.id)}>
                 {template.name} ekle
               </button>
+              {mode === 'manage' && (
+                <button type="button" className="secondary" onClick={() => handleDelete(template.id)}>
+                  Sil
+                </button>
+              )}
             </li>
           ))}
         </ul>
       )}
-      <form onSubmit={handleSaveToday}>
-        <label>
-          Bugünü şablon olarak kaydet
-          <input
-            type="text"
-            value={newTemplateName}
-            onChange={(e) => setNewTemplateName(e.target.value)}
-            placeholder="Şablon adı (örn. Kahvaltı)"
-          />
-        </label>
-        <button type="submit">Kaydet</button>
-      </form>
+      {mode === 'manage' && (
+        <form onSubmit={handleSaveToday}>
+          <label>
+            Bugünü şablon olarak kaydet
+            <input
+              type="text"
+              value={newTemplateName}
+              onChange={(e) => setNewTemplateName(e.target.value)}
+              placeholder="Şablon adı (örn. Kahvaltı)"
+            />
+          </label>
+          <button type="submit">Kaydet</button>
+        </form>
+      )}
     </div>
   );
 }

@@ -32,6 +32,10 @@ export async function saveMealTemplateFromDiary(
   return saveMealTemplate(db, name, items);
 }
 
+export async function deleteMealTemplate(db: AppDatabase, templateId: string): Promise<void> {
+  await db.mealTemplates.delete(templateId);
+}
+
 export async function applyMealTemplate(
   db: AppDatabase,
   templateId: string,

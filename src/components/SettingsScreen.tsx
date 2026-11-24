@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import type { AppDatabase } from '../db/database';
 import type { UserProfile } from '../db/schema';
+import { AboutScreen } from './AboutScreen';
+import { ExportImport } from './ExportImport';
+import { MealTemplates } from './MealTemplates';
 import { ProfileSettings } from './ProfileSettings';
 
 interface SettingsScreenProps {
@@ -31,22 +34,41 @@ export function SettingsScreen({
   return (
     <div>
       <h2>Ayarlar</h2>
-      <ProfileSettings db={db} profile={profile} onSaved={onProfileSaved} />
-      <form onSubmit={handleSubmit}>
-        <label>
-          Google Cloud Vision API anahtarı
-          <input
-            type="password"
-            value={key}
-            onChange={(e) => {
-              setKey(e.target.value);
-              setSaved(false);
-            }}
-          />
-        </label>
-        <button type="submit">Kaydet</button>
-        {saved && <p role="status">Kaydedildi.</p>}
-      </form>
+
+      <div className="card">
+        <ProfileSettings db={db} profile={profile} onSaved={onProfileSaved} />
+      </div>
+
+      <div className="card">
+        <form onSubmit={handleSubmit}>
+          <h3>Etiket Fotoğrafı (Vision API)</h3>
+          <label>
+            Google Cloud Vision API anahtarı
+            <input
+              type="password"
+              value={key}
+              onChange={(e) => {
+                setKey(e.target.value);
+                setSaved(false);
+              }}
+            />
+          </label>
+          <button type="submit">Kaydet</button>
+          {saved && <p role="status">Kaydedildi.</p>}
+        </form>
+      </div>
+
+      <div className="card">
+        <MealTemplates db={db} mode="manage" />
+      </div>
+
+      <div className="card">
+        <ExportImport db={db} />
+      </div>
+
+      <div className="card">
+        <AboutScreen />
+      </div>
     </div>
   );
 }
