@@ -81,4 +81,16 @@ describe('getAvailableUnits', () => {
     expect(units).not.toContain('g');
     expect(units).not.toContain('adet');
   });
+
+  test('isLiquid alanı yoksa isme bakarak sıvı tahmin eder (eski/bulk veri için)', () => {
+    expect(getAvailableUnits(makeFood({ name: 'Süt' }))).toContain('ml');
+    expect(getAvailableUnits(makeFood({ name: 'Tam Yağlı Süt · Pınar' }))).toContain('ml');
+    expect(getAvailableUnits(makeFood({ name: 'Ayran' }))).toContain('ml');
+    expect(getAvailableUnits(makeFood({ name: 'Mercimek Çorbası' }))).toContain('ml');
+    expect(getAvailableUnits(makeFood({ name: 'Elma' }))).toEqual(['g']);
+  });
+
+  test('isLiquid açıkça false ise isme bakılmaz', () => {
+    expect(getAvailableUnits(makeFood({ name: 'Süt', isLiquid: false }))).toEqual(['g']);
+  });
 });

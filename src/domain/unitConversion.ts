@@ -1,4 +1,5 @@
 import type { Food } from '../db/schema';
+import { normalizeTurkish } from '../lib/turkishNormalize';
 
 export type QuantityUnit = 'g' | 'ml' | 'bardak' | 'kupa' | 'yemek_kasigi' | 'tatli_kasigi' | 'cay_kasigi' | 'adet';
 
@@ -34,9 +35,32 @@ export function convertToGrams(quantity: number, unit: QuantityUnit, pieceGrams?
   return quantity * UNIT_TO_GRAMS[unit];
 }
 
+// isLiquid is missing on most bulk/imported foods (OFF/USDA records don't carry
+// it), so fall back to a name-based guess rather than defaulting every drink/
+// soup to solid-only units.
+const LIQUID_NAME_KEYWORDS = [
+  'sut', // süt
+  'ayran',
+  'corba', // çorba
+  'meyve suyu',
+  'kola',
+  'gazoz',
+  'limonata',
+  'surup', // şurup
+  'smoothie',
+  'salgam', // şalgam
+  'sivi yag', // sıvı yağ
+];
+
+function guessIsLiquid(name: string): boolean {
+  const normalized = normalizeTurkish(name);
+  return LIQUID_NAME_KEYWORDS.some((keyword) => normalized.includes(keyword));
+}
+
 /** Besinin türüne göre anlamlı birimleri döner: sıvıya g/adet, katıya ml/kaşık önerilmez. */
-export function getAvailableUnits(food: Pick<Food, 'isLiquid' | 'pieceGrams'>): QuantityUnit[] {
-  if (food.isLiquid) {
+export function getAvailableUnits(food: Pick<Food, 'isLiquid' | 'pieceGrams' | 'name'>): QuantityUnit[] {
+  const isLiquid = food.isLiquid ?? guessIsLiquid(food.name);
+  if (isLiquid) {
     return LIQUID_UNITS;
   }
   return food.pieceGrams ? ['g', 'adet'] : ['g'];
