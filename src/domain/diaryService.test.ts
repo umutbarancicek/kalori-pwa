@@ -5,6 +5,7 @@ import { upsertFood } from '../db/foodRepository';
 import type { Food, Nutrients } from '../db/schema';
 import {
   addDiaryEntry,
+  copyMealFromDate,
   deleteDiaryEntry,
   getDailyTotal,
   getEntriesGroupedByMeal,
@@ -186,5 +187,25 @@ describe('diaryService', () => {
     expect(getMealTypeForTime(22)).toBe('dinner');
     expect(getMealTypeForTime(23)).toBe('snack');
     expect(getMealTypeForTime(2)).toBe('snack');
+  });
+
+  test('copyMealFromDate kaynak gündeki öğünün kalemlerini hedef güne kopyalar', async () => {
+    await upsertFood(db, makeFood({ id: '1' }));
+    await upsertFood(db, makeFood({ id: '2' }));
+    await addDiaryEntry(db, '1', 100, '2026-11-22', 'breakfast');
+    await addDiaryEntry(db, '2', 50, '2026-11-22', 'breakfast');
+    await addDiaryEntry(db, '1', 999, '2026-11-22', 'lunch'); // different meal, must not copy
+
+    const copied = await copyMealFromDate(db, '2026-11-22', 'breakfast', '2026-11-23');
+
+    expect(copied).toHaveLength(2);
+    const targetEntries = await db.diaryEntries.where('date').equals('2026-11-23').toArray();
+    expect(targetEntries).toHaveLength(2);
+    expect(targetEntries.every((e) => e.mealType === 'breakfast')).toBe(true);
+  });
+
+  test('copyMealFromDate kaynakta hiç kayıt yoksa boş dizi döner, hata fırlatmaz', async () => {
+    const copied = await copyMealFromDate(db, '2026-11-22', 'breakfast', '2026-11-23');
+    expect(copied).toEqual([]);
   });
 });

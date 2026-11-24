@@ -132,6 +132,26 @@ export function getMealTypeForTime(hour: number): MealType {
   return match?.mealType ?? 'snack';
 }
 
+/** Re-logs every item from one date+meal onto another date (same meal), e.g. "copy yesterday's breakfast". */
+export async function copyMealFromDate(
+  db: AppDatabase,
+  sourceDate: string,
+  mealType: MealType,
+  targetDate: string,
+): Promise<DiaryEntry[]> {
+  const sourceEntries = await db.diaryEntries
+    .where('date')
+    .equals(sourceDate)
+    .filter((entry) => (entry.mealType ?? 'other') === mealType)
+    .toArray();
+
+  const copied: DiaryEntry[] = [];
+  for (const entry of sourceEntries) {
+    copied.push(await addDiaryEntry(db, entry.foodId, entry.quantityGrams, targetDate, mealType));
+  }
+  return copied;
+}
+
 export async function getEntriesGroupedByMeal(
   db: AppDatabase,
   date: string,

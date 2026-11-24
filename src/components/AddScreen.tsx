@@ -2,14 +2,19 @@ import { useEffect, useState } from 'react';
 import type { AppDatabase } from '../db/database';
 import { getFavoritesAndRecents, searchFoods, upsertFood } from '../db/foodRepository';
 import type { Food, MealType } from '../db/schema';
-import { addDiaryEntry } from '../domain/diaryService';
+import { addDiaryEntry, copyMealFromDate, getEntriesGroupedByMeal } from '../domain/diaryService';
 import { lookupBarcode } from '../domain/barcodeLookup';
 import { parseFreeText } from '../domain/freeTextParser';
+import { addDaysToDateString } from '../lib/localDate';
 import { fetchProductFromOff } from '../lib/offApi';
 import { BarcodeScanner } from './BarcodeScanner';
 import { FoodDetailScreen } from './FoodDetailScreen';
 import { LabelCaptureFlow } from './LabelCaptureFlow';
-import { MEAL_TYPE_LABELS_DATIVE, MealTypeSelect } from './MealTypeSelect';
+import {
+  MEAL_TYPE_LABELS_ACCUSATIVE,
+  MEAL_TYPE_LABELS_DATIVE,
+  MealTypeSelect,
+} from './MealTypeSelect';
 import { MealTemplates } from './MealTemplates';
 import { SourceBadge } from './SourceBadge';
 
@@ -39,6 +44,18 @@ export function AddScreen({
   const [prefillQuantityGrams, setPrefillQuantityGrams] = useState<number | undefined>(undefined);
   const [addedCount, setAddedCount] = useState(0);
   const [message, setMessage] = useState<string | null>(null);
+  const [yesterdayHasMeal, setYesterdayHasMeal] = useState(false);
+  const yesterday = addDaysToDateString(date, -1);
+
+  useEffect(() => {
+    let cancelled = false;
+    getEntriesGroupedByMeal(db, yesterday).then((grouped) => {
+      if (!cancelled) setYesterdayHasMeal(grouped[mealType].length > 0);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [db, yesterday, mealType, addedCount]);
 
   useEffect(() => {
     if (mode !== 'search' || selectedFood) return;
@@ -115,6 +132,11 @@ export function AddScreen({
     openDetailFor(food);
   }
 
+  async function handleCopyYesterday() {
+    const copied = await copyMealFromDate(db, yesterday, mealType, date);
+    setAddedCount((c) => c + copied.length);
+  }
+
   return (
     <div>
       <h2>{MEAL_TYPE_LABELS_DATIVE[mealType]} ekle</h2>
@@ -153,6 +175,12 @@ export function AddScreen({
               Şablonlar
             </button>
           </div>
+
+          {yesterdayHasMeal && mode === 'search' && (
+            <button type="button" className="secondary" onClick={handleCopyYesterday}>
+              Dünkü {MEAL_TYPE_LABELS_ACCUSATIVE[mealType]} kopyala
+            </button>
+          )}
 
           {mode === 'search' && (
             <form onSubmit={handleQuickSubmit}>

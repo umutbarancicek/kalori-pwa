@@ -17,6 +17,15 @@ export const MEAL_TYPE_LABELS_DATIVE: Record<MealType, string> = {
   other: 'Diğerine',
 };
 
+/** Accusative ("...'yı kopyala") form. */
+export const MEAL_TYPE_LABELS_ACCUSATIVE: Record<MealType, string> = {
+  breakfast: 'Kahvaltıyı',
+  lunch: 'Öğle Yemeğini',
+  dinner: 'Akşam Yemeğini',
+  snack: 'Atıştırmalığı',
+  other: 'Diğerini',
+};
+
 const SELECTABLE_MEAL_TYPES: MealType[] = ['breakfast', 'lunch', 'dinner', 'snack'];
 
 interface MealTypeSelectProps {
