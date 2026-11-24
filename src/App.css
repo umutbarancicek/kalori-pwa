@@ -177,7 +177,7 @@ ul {
   border-bottom: none;
 }
 
-.card ul li button {
+ul li button {
   background: none;
   color: var(--text);
   padding: 4px 0;
@@ -186,7 +186,7 @@ ul {
   flex: 1;
 }
 
-.card ul li button:hover {
+ul li button:hover {
   color: var(--primary);
   background: none;
 }
