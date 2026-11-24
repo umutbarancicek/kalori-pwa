@@ -2,7 +2,7 @@ import type { FoodSource } from '../db/schema';
 
 const LABELS: Record<FoodSource, string> = {
   bulk: 'Toplu veri',
-  user: 'Kullanıcı',
+  user: 'Kendi kaydım',
   verified: 'Doğrulandı',
 };
 
@@ -13,6 +13,12 @@ const COLORS: Record<FoodSource, string> = {
 };
 
 export function SourceBadge({ source }: { source: FoodSource }) {
+  // "Toplu veri" is the common case for ~1700 seeded records and shown on
+  // every single search result row told the user nothing — only the
+  // distinctive sources (their own entries, verified-correct entries) are
+  // worth a badge.
+  if (source === 'bulk') return null;
+
   return (
     <span
       style={{

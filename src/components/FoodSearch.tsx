@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import type { AppDatabase } from '../db/database';
 import { getFavoritesAndRecents, searchFoods } from '../db/foodRepository';
 import type { Food } from '../db/schema';
-import { resolveQuantityGrams } from '../domain/diaryService';
 import { SourceBadge } from './SourceBadge';
 
 interface FoodSearchProps {
@@ -41,15 +40,16 @@ export function FoodSearch({ db, onSelect }: FoodSearchProps) {
       />
       <ul>
         {results.map((food) => {
-          const quantity = resolveQuantityGrams(undefined, food);
-          const kcal = Math.round((food.nutrientsPer100g.kcal * quantity) / 100);
+          const n = food.nutrientsPer100g;
           return (
             <li key={food.id}>
               <button type="button" onClick={() => onSelect(food)}>
                 {food.name}
+                {food.brand ? ` · ${food.brand}` : ''}
                 <br />
                 <small style={{ color: 'var(--text-muted)' }}>
-                  {kcal} kcal, {quantity} g
+                  {Math.round(n.kcal)} kcal/100g · P {Math.round(n.protein)} K{' '}
+                  {Math.round(n.carb)} Y {Math.round(n.fat)}
                 </small>
               </button>
               <SourceBadge source={food.source} />
