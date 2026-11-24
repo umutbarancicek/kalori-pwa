@@ -1,5 +1,5 @@
 import 'fake-indexeddb/auto';
-import { beforeEach, describe, expect, test } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { AppDatabase } from './database';
 import {
   findByBarcode,
@@ -21,6 +21,17 @@ const sampleNutrients: Nutrients = {
   salt: 1.5,
 };
 
+const ZERO_NUTRIENTS: Nutrients = {
+  kcal: 0,
+  protein: 0,
+  carb: 0,
+  sugar: 0,
+  fat: 0,
+  satFat: 0,
+  fiber: 0,
+  salt: 0,
+};
+
 function makeFood(overrides: Partial<Food>): Food {
   return {
     id: overrides.id ?? '1',
@@ -37,6 +48,10 @@ describe('foodRepository', () => {
 
   beforeEach(() => {
     db = new AppDatabase();
+  });
+
+  afterEach(async () => {
+    await db.delete();
   });
 
   test('corba araması Çorba kaydını bulur', async () => {
@@ -96,5 +111,95 @@ describe('foodRepository', () => {
     const results = await searchFoods(db, 'tarhana');
 
     expect(results.some((f) => f.id === 'cache-2')).toBe(true);
+  });
+
+  test('tam eşleşme, sadece içeren sonuçlardan önce gelir', async () => {
+    await upsertFood(db, makeFood({ id: 'exact', name: 'Peynir' }));
+    await upsertFood(db, makeFood({ id: 'contains-1', name: 'Küp Peynirli Poğaça' }));
+    await upsertFood(db, makeFood({ id: 'contains-2', name: 'Peynirli Börek' }));
+
+    const results = await searchFoods(db, 'peynir');
+
+    expect(results[0].id).toBe('exact');
+  });
+
+  test('kelime başı eşleşmesi, sadece içeren sonuçlardan önce gelir', async () => {
+    await upsertFood(db, makeFood({ id: 'prefix', name: 'Peynirli Tost' }));
+    await upsertFood(db, makeFood({ id: 'contains', name: 'Tost Peynirli' }));
+
+    const results = await searchFoods(db, 'peynir');
+
+    expect(results[0].id).toBe('prefix');
+    expect(results[1].id).toBe('contains');
+  });
+
+  test('aynı katmanda (ör. tam eşleşme) sık kullanılan kayıt önce gelir', async () => {
+    await upsertFood(db, makeFood({ id: 'rare', name: 'Peynir', usageCount: 0 }));
+    await upsertFood(db, makeFood({ id: 'frequent', name: 'Peynir', usageCount: 10, lastUsedAt: 5 }));
+
+    // Different ids with the identical name would collide under dedup — give
+    // them distinct barcodes so this test isolates ranking from dedup.
+    await db.foods.update('rare', { barcode: '111' });
+    await db.foods.update('frequent', { barcode: '222' });
+
+    const results = await searchFoods(db, 'peynir');
+
+    expect(results[0].id).toBe('frequent');
+  });
+
+  test('tüm besin değerleri sıfır olan toplu veri kaydı arama sonuçlarında gizlenir', async () => {
+    await upsertFood(
+      db,
+      makeFood({ id: 'empty-data', name: 'Peynir', source: 'bulk', nutrientsPer100g: ZERO_NUTRIENTS }),
+    );
+    await upsertFood(db, makeFood({ id: 'has-data', name: 'Peynir Light', nutrientsPer100g: sampleNutrients }));
+
+    const results = await searchFoods(db, 'peynir');
+
+    expect(results.some((f) => f.id === 'empty-data')).toBe(false);
+    expect(results.some((f) => f.id === 'has-data')).toBe(true);
+  });
+
+  test('kullanıcının kendi eklediği sıfır değerli kayıt (ör. su) gizlenmez', async () => {
+    await upsertFood(
+      db,
+      makeFood({ id: 'user-zero', name: 'Su', source: 'user', nutrientsPer100g: ZERO_NUTRIENTS }),
+    );
+
+    const results = await searchFoods(db, 'su');
+
+    expect(results.some((f) => f.id === 'user-zero')).toBe(true);
+  });
+
+  test('aynı normalize isme sahip tekrarlar tek sonuca indirgenir, en eksiksiz kayıt kalır', async () => {
+    await upsertFood(
+      db,
+      makeFood({
+        id: 'incomplete',
+        name: 'Lor Peyniri',
+        nutrientsPer100g: { ...sampleNutrients, fiber: 0, salt: 0 },
+      }),
+    );
+    await db.foods.update('incomplete', { barcode: '1' });
+    await upsertFood(
+      db,
+      makeFood({
+        id: 'complete',
+        name: 'lor peyniri', // different casing — same normalized name
+        nutrientsPer100g: { ...sampleNutrients, fiber: 2, salt: 1.1 },
+      }),
+    );
+    await db.foods.update('complete', { barcode: '2' });
+
+    const results = await searchFoods(db, 'lor peyniri');
+
+    expect(results).toHaveLength(1);
+    expect(results[0].id).toBe('complete');
+  });
+
+  test('yeterli tam/kelime başı/içerir eşleşmesi yoksa bulanık (fuse) arama son çare olarak devreye girer', async () => {
+    await upsertFood(db, makeFood({ id: '1', name: 'Çorba' }));
+    const results = await searchFoods(db, 'corbaa'); // one extra letter — no exact/prefix/contains match
+    expect(results.some((f) => f.name === 'Çorba')).toBe(true);
   });
 });
