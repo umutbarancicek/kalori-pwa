@@ -10,6 +10,9 @@ interface ExportImportProps {
 export function ExportImport({ db }: ExportImportProps) {
   const [mode, setMode] = useState<'overwrite' | 'merge'>('merge');
   const [status, setStatus] = useState<string | null>(null);
+  const [pendingOverwrite, setPendingOverwrite] = useState<{ text: string; fileName: string } | null>(
+    null,
+  );
 
   async function handleExport() {
     const json = await exportAllData(db);
@@ -22,20 +25,36 @@ export function ExportImport({ db }: ExportImportProps) {
     URL.revokeObjectURL(url);
   }
 
-  async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  async function runImport(text: string, importMode: 'overwrite' | 'merge') {
     try {
-      const text = await file.text();
-      await importAllData(db, text, mode);
+      await importAllData(db, text, importMode);
       setStatus(
-        `İçe aktarma tamamlandı (${mode === 'overwrite' ? 'üzerine yazıldı' : 'birleştirildi'}).`,
+        `İçe aktarma tamamlandı (${importMode === 'overwrite' ? 'üzerine yazıldı' : 'birleştirildi'}).`,
       );
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'İçe aktarma başarısız oldu.');
-    } finally {
-      e.target.value = '';
     }
+  }
+
+  async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+    const text = await file.text();
+    if (mode === 'overwrite') {
+      // Destructive — hold for an explicit confirmation instead of running it
+      // the moment a file is picked.
+      setStatus(null);
+      setPendingOverwrite({ text, fileName: file.name });
+      return;
+    }
+    await runImport(text, 'merge');
+  }
+
+  async function handleConfirmOverwrite() {
+    if (!pendingOverwrite) return;
+    await runImport(pendingOverwrite.text, 'overwrite');
+    setPendingOverwrite(null);
   }
 
   return (
@@ -67,10 +86,28 @@ export function ExportImport({ db }: ExportImportProps) {
         </label>
       </fieldset>
 
-      <label>
-        JSON dosyası seç
-        <input type="file" accept="application/json" onChange={handleImport} />
-      </label>
+      {pendingOverwrite ? (
+        <div role="alert">
+          <p>
+            <strong>{pendingOverwrite.fileName}</strong> dosyasıyla <strong>üzerine yazılacak</strong>.
+            Mevcut tüm besin/günlük/şablon/ayar verilerin kalıcı olarak silinip dosyadakiyle
+            değiştirilecek. Bu geri alınamaz.
+          </p>
+          <div className="row-form">
+            <button type="button" className="secondary" onClick={handleConfirmOverwrite}>
+              Evet, üzerine yaz
+            </button>
+            <button type="button" onClick={() => setPendingOverwrite(null)}>
+              Vazgeç
+            </button>
+          </div>
+        </div>
+      ) : (
+        <label>
+          JSON dosyası seç
+          <input type="file" accept="application/json" onChange={handleImport} />
+        </label>
+      )}
       {status && <p role="status">{status}</p>}
     </div>
   );
