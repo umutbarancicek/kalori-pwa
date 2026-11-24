@@ -54,4 +54,41 @@ describe('transformOffRecord', () => {
     };
     expect(transformOffRecord(noCalorieData)).toBeNull();
   });
+
+  test('imkansız kcal (>900/100g) kaydı null döner', () => {
+    const extremeKcal: OffRawProduct = {
+      code: '8690000000004',
+      product_name: 'Doritos taco',
+      countries_tags: ['en:turkey'],
+      nutriments: { 'energy-kcal_100g': 4960, proteins_100g: 5, carbohydrates_100g: 60, fat_100g: 25 },
+    };
+    expect(transformOffRecord(extremeKcal)).toBeNull();
+  });
+
+  test('isim marka ile aynıysa (gerçek ürün adı yoksa) null döner', () => {
+    const junkName: OffRawProduct = {
+      code: '8690000000005',
+      product_name: 'nestle',
+      brands: 'nestle',
+      countries_tags: ['en:turkey'],
+      nutriments: { 'energy-kcal_100g': 372, proteins_100g: 5, carbohydrates_100g: 60, fat_100g: 5 },
+    };
+    expect(transformOffRecord(junkName)).toBeNull();
+  });
+
+  test('beyan edilen kcal makro toplamından %50+ sapıyorsa null döner', () => {
+    const macroMismatch: OffRawProduct = {
+      code: '8690000000006',
+      product_name: 'migros süt',
+      brands: 'migros',
+      countries_tags: ['en:turkey'],
+      // P*4 + C*4 + F*9 = 2.9*4 + 4.7*4 + 31*9 = 309.9, stated 58 — %80+ sapma
+      nutriments: { 'energy-kcal_100g': 58, proteins_100g: 2.9, carbohydrates_100g: 4.7, fat_100g: 31 },
+    };
+    expect(transformOffRecord(macroMismatch)).toBeNull();
+  });
+
+  test('makro toplamı kcal ile tutarlı ise kabul edilir', () => {
+    expect(transformOffRecord(sampleTrProduct)).not.toBeNull();
+  });
 });

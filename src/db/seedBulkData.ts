@@ -4,7 +4,7 @@ import type { Food } from './schema';
 
 // Bump this whenever public/data/foods-*.json changes meaningfully, so devices
 // that already ran the seed (even with empty/stale data files) re-seed.
-export const BULK_DATA_VERSION = 4;
+export const BULK_DATA_VERSION = 5;
 export const BULK_DATA_VERSION_KEY = 'bulkDataVersion';
 
 export async function seedBulkDataIfNeeded(
