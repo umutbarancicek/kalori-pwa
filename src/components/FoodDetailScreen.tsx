@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { AppDatabase } from '../db/database';
+import { toggleFavorite } from '../db/foodRepository';
 import { addDiaryEntry, resolveQuantityGrams } from '../domain/diaryService';
 import { convertToGrams, UNIT_LABELS, type QuantityUnit } from '../domain/unitConversion';
 import type { Food, MealType } from '../db/schema';
@@ -52,6 +53,7 @@ export function FoodDetailScreen({
     () => initialQuantityGrams ?? resolveQuantityGrams(undefined, food),
   );
   const [unit, setUnit] = useState<QuantityUnit>('g');
+  const [isFavorite, setIsFavorite] = useState(!!food.isFavorite);
 
   const grams = convertToGrams(quantity, unit);
   const ratio = grams / 100;
@@ -63,11 +65,25 @@ export function FoodDetailScreen({
     onAdded();
   }
 
+  async function handleToggleFavorite() {
+    const updated = await toggleFavorite(db, food.id);
+    setIsFavorite(!!updated.isFavorite);
+  }
+
   return (
     <form onSubmit={handleSubmit} className="food-detail">
       <h3>
         {food.name}
         {food.brand ? ` · ${food.brand}` : ''}
+        <button
+          type="button"
+          className="favorite-star"
+          aria-label={isFavorite ? 'Favoriden çıkar' : 'Favoriye ekle'}
+          aria-pressed={isFavorite}
+          onClick={handleToggleFavorite}
+        >
+          {isFavorite ? '★' : '☆'}
+        </button>
       </h3>
       <p className="kcal-total">{Math.round(n.kcal * ratio)} kcal</p>
 

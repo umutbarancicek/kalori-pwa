@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { AppDatabase } from '../db/database';
-import { getFavoritesAndRecents, searchFoods, upsertFood } from '../db/foodRepository';
+import { getFavoritesAndRecents, searchFoods, toggleFavorite, upsertFood } from '../db/foodRepository';
 import type { Food, MealType } from '../db/schema';
 import { addDiaryEntry, copyMealFromDate, getEntriesGroupedByMeal } from '../domain/diaryService';
 import { lookupBarcode } from '../domain/barcodeLookup';
@@ -137,6 +137,11 @@ export function AddScreen({
     setAddedCount((c) => c + copied.length);
   }
 
+  async function handleToggleFavorite(foodId: string) {
+    const updated = await toggleFavorite(db, foodId);
+    setResults((prev) => prev.map((f) => (f.id === foodId ? updated : f)));
+  }
+
   return (
     <div>
       <h2>{MEAL_TYPE_LABELS_DATIVE[mealType]} ekle</h2>
@@ -210,6 +215,15 @@ export function AddScreen({
                           {Math.round(n.kcal)} kcal/100g · P {Math.round(n.protein)} K{' '}
                           {Math.round(n.carb)} Y {Math.round(n.fat)}
                         </small>
+                      </button>
+                      <button
+                        type="button"
+                        className="favorite-star"
+                        aria-label={food.isFavorite ? 'Favoriden çıkar' : 'Favoriye ekle'}
+                        aria-pressed={!!food.isFavorite}
+                        onClick={() => handleToggleFavorite(food.id)}
+                      >
+                        {food.isFavorite ? '★' : '☆'}
                       </button>
                       <SourceBadge source={food.source} />
                     </li>

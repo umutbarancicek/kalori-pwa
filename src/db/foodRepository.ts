@@ -174,10 +174,22 @@ export async function recordUsage(
 export async function getFavoritesAndRecents(db: AppDatabase, limit = 10): Promise<Food[]> {
   const all = await db.foods.toArray();
   return all
-    .filter((food) => food.usageCount > 0)
+    .filter((food) => food.usageCount > 0 || food.isFavorite)
     .sort((a, b) => {
+      if (!!b.isFavorite !== !!a.isFavorite) return b.isFavorite ? 1 : -1;
       if (b.usageCount !== a.usageCount) return b.usageCount - a.usageCount;
       return (b.lastUsedAt ?? 0) - (a.lastUsedAt ?? 0);
     })
     .slice(0, limit);
+}
+
+/** Flips a food's favorite flag and returns the updated record. */
+export async function toggleFavorite(db: AppDatabase, foodId: string): Promise<Food> {
+  const food = await db.foods.get(foodId);
+  if (!food) {
+    throw new Error(`Food not found: ${foodId}`);
+  }
+  const updated: Food = { ...food, isFavorite: !food.isFavorite };
+  await db.foods.put(updated);
+  return updated;
 }

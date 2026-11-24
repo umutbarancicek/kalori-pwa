@@ -23,6 +23,7 @@ export interface Food {
   lastQuantityGrams?: number;
   usageCount: number;
   lastUsedAt?: number;
+  isFavorite?: boolean;
 }
 
 export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'other';

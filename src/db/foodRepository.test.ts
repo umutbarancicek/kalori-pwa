@@ -6,6 +6,7 @@ import {
   getFavoritesAndRecents,
   recordUsage,
   searchFoods,
+  toggleFavorite,
   upsertFood,
 } from './foodRepository';
 import type { Food, Nutrients } from './schema';
@@ -87,6 +88,29 @@ describe('foodRepository', () => {
     await upsertFood(db, makeFood({ id: '2', name: 'Kullanılmış', usageCount: 1, lastUsedAt: 1 }));
     const favorites = await getFavoritesAndRecents(db);
     expect(favorites.map((f) => f.name)).toEqual(['Kullanılmış']);
+  });
+
+  test('toggleFavorite bir besini favori yapar ve geri alır', async () => {
+    await upsertFood(db, makeFood({ id: '1', name: 'Yoğurt' }));
+    const favored = await toggleFavorite(db, '1');
+    expect(favored.isFavorite).toBe(true);
+    const unfavored = await toggleFavorite(db, '1');
+    expect(unfavored.isFavorite).toBe(false);
+  });
+
+  test('getFavoritesAndRecents hiç kullanılmamış ama favori olan besini de listeler', async () => {
+    await upsertFood(db, makeFood({ id: '1', name: 'Favori Ama Kullanılmamış', usageCount: 0 }));
+    await toggleFavorite(db, '1');
+    const favorites = await getFavoritesAndRecents(db);
+    expect(favorites.map((f) => f.name)).toContain('Favori Ama Kullanılmamış');
+  });
+
+  test('getFavoritesAndRecents favorileri kullanım sayısından önce sıralar', async () => {
+    await upsertFood(db, makeFood({ id: '1', name: 'Çok Kullanılan', usageCount: 10, lastUsedAt: 1 }));
+    await upsertFood(db, makeFood({ id: '2', name: 'Favori', usageCount: 1, lastUsedAt: 2 }));
+    await toggleFavorite(db, '2');
+    const favorites = await getFavoritesAndRecents(db);
+    expect(favorites[0].name).toBe('Favori');
   });
 
   test('tek karakterli arama onlarca alakasız sonuç döndürmez', async () => {
