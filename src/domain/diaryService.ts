@@ -29,6 +29,19 @@ function scaleNutrients(per100g: Nutrients, quantityGrams: number): Nutrients {
   };
 }
 
+function multiplyNutrients(n: Nutrients, factor: number): Nutrients {
+  return {
+    kcal: n.kcal * factor,
+    protein: n.protein * factor,
+    carb: n.carb * factor,
+    sugar: n.sugar * factor,
+    fat: n.fat * factor,
+    satFat: n.satFat * factor,
+    fiber: n.fiber * factor,
+    salt: n.salt * factor,
+  };
+}
+
 function addNutrients(a: Nutrients, b: Nutrients): Nutrients {
   return {
     kcal: a.kcal + b.kcal,
@@ -69,6 +82,54 @@ export async function addDiaryEntry(
   await db.diaryEntries.add(entry);
   await recordUsage(db, foodId, quantityGrams);
   return entry;
+}
+
+/** Removes the entry and returns what was deleted, so the caller can offer "undo" by re-adding it. */
+export async function deleteDiaryEntry(db: AppDatabase, entryId: string): Promise<DiaryEntry> {
+  const entry = await db.diaryEntries.get(entryId);
+  if (!entry) {
+    throw new Error(`Diary entry not found: ${entryId}`);
+  }
+  await db.diaryEntries.delete(entryId);
+  return entry;
+}
+
+/** Re-inserts a previously deleted entry (for "undo"), preserving its original id and mealType. */
+export async function restoreDiaryEntry(db: AppDatabase, entry: DiaryEntry): Promise<void> {
+  await db.diaryEntries.add(entry);
+}
+
+export async function updateDiaryEntryQuantity(
+  db: AppDatabase,
+  entryId: string,
+  quantityGrams: number,
+): Promise<DiaryEntry> {
+  const entry = await db.diaryEntries.get(entryId);
+  if (!entry) {
+    throw new Error(`Diary entry not found: ${entryId}`);
+  }
+  const food = await db.foods.get(entry.foodId);
+  const snapshotNutrients = food
+    ? scaleNutrients(food.nutrientsPer100g, quantityGrams)
+    : // Food was deleted since this entry was logged — scale the entry's own
+      // snapshot by the ratio of new/old quantity rather than losing the data.
+      multiplyNutrients(entry.snapshotNutrients, quantityGrams / entry.quantityGrams);
+  const updated: DiaryEntry = { ...entry, quantityGrams, snapshotNutrients };
+  await db.diaryEntries.put(updated);
+  return updated;
+}
+
+const MEAL_TYPE_HOUR_RANGES: { mealType: MealType; startHour: number; endHour: number }[] = [
+  { mealType: 'breakfast', startHour: 5, endHour: 11 },
+  { mealType: 'lunch', startHour: 11, endHour: 15 },
+  { mealType: 'snack', startHour: 15, endHour: 18 },
+  { mealType: 'dinner', startHour: 18, endHour: 23 },
+];
+
+/** 05–11 Kahvaltı, 11–15 Öğle, 15–18 Atıştırmalık, 18–23 Akşam, else Atıştırmalık (gece). */
+export function getMealTypeForTime(hour: number): MealType {
+  const match = MEAL_TYPE_HOUR_RANGES.find((r) => hour >= r.startHour && hour < r.endHour);
+  return match?.mealType ?? 'snack';
 }
 
 export async function getEntriesGroupedByMeal(

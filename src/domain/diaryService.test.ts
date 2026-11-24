@@ -5,10 +5,13 @@ import { upsertFood } from '../db/foodRepository';
 import type { Food, Nutrients } from '../db/schema';
 import {
   addDiaryEntry,
+  deleteDiaryEntry,
   getDailyTotal,
   getEntriesGroupedByMeal,
   getHistory,
+  getMealTypeForTime,
   resolveQuantityGrams,
+  updateDiaryEntryQuantity,
 } from './diaryService';
 
 const nutrientsPer100g: Nutrients = {
@@ -131,5 +134,57 @@ describe('diaryService', () => {
   test('resolveQuantityGrams miktar verilmişse onu kullanır', () => {
     const food = makeFood({ id: '1', lastQuantityGrams: 75 });
     expect(resolveQuantityGrams(30, food)).toBe(30);
+  });
+
+  test('deleteDiaryEntry kaydı siler', async () => {
+    await upsertFood(db, makeFood({ id: '1' }));
+    const entry = await addDiaryEntry(db, '1', 100, '2026-11-23');
+
+    await deleteDiaryEntry(db, entry.id);
+
+    expect(await db.diaryEntries.get(entry.id)).toBeUndefined();
+  });
+
+  test('deleteDiaryEntry silinen kaydı geri eklemek için döner (geri al)', async () => {
+    await upsertFood(db, makeFood({ id: '1' }));
+    const entry = await addDiaryEntry(db, '1', 100, '2026-11-23');
+
+    const deleted = await deleteDiaryEntry(db, entry.id);
+
+    expect(deleted).toMatchObject({ id: entry.id, quantityGrams: 100 });
+  });
+
+  test('updateDiaryEntryQuantity miktarı ve besin değerlerini günceller', async () => {
+    await upsertFood(db, makeFood({ id: '1' }));
+    const entry = await addDiaryEntry(db, '1', 100, '2026-11-23');
+
+    const updated = await updateDiaryEntryQuantity(db, entry.id, 50);
+
+    expect(updated.quantityGrams).toBe(50);
+    expect(updated.snapshotNutrients.kcal).toBe(100);
+  });
+
+  test('updateDiaryEntryQuantity besin artık silinmişse mevcut oranla ölçekler', async () => {
+    await upsertFood(db, makeFood({ id: 'gone' }));
+    const entry = await addDiaryEntry(db, 'gone', 100, '2026-11-23');
+    await db.foods.delete('gone');
+
+    const updated = await updateDiaryEntryQuantity(db, entry.id, 50);
+
+    expect(updated.quantityGrams).toBe(50);
+    expect(updated.snapshotNutrients.kcal).toBe(100); // scaled 200kcal@100g -> 100kcal@50g
+  });
+
+  test('getMealTypeForTime saate göre doğru öğünü döner', () => {
+    expect(getMealTypeForTime(7)).toBe('breakfast');
+    expect(getMealTypeForTime(10)).toBe('breakfast');
+    expect(getMealTypeForTime(11)).toBe('lunch');
+    expect(getMealTypeForTime(14)).toBe('lunch');
+    expect(getMealTypeForTime(15)).toBe('snack');
+    expect(getMealTypeForTime(17)).toBe('snack');
+    expect(getMealTypeForTime(18)).toBe('dinner');
+    expect(getMealTypeForTime(22)).toBe('dinner');
+    expect(getMealTypeForTime(23)).toBe('snack');
+    expect(getMealTypeForTime(2)).toBe('snack');
   });
 });
