@@ -2,7 +2,13 @@ import { useState } from 'react';
 import type { AppDatabase } from '../db/database';
 import { toggleFavorite } from '../db/foodRepository';
 import { addDiaryEntry, resolveQuantityGrams } from '../domain/diaryService';
-import { convertToGrams, getAvailableUnits, UNIT_LABELS, type QuantityUnit } from '../domain/unitConversion';
+import {
+  convertToGrams,
+  getAvailableUnits,
+  resolvePieceGrams,
+  UNIT_LABELS,
+  type QuantityUnit,
+} from '../domain/unitConversion';
 import type { Food, MealType } from '../db/schema';
 
 interface FoodDetailScreenProps {
@@ -56,7 +62,7 @@ export function FoodDetailScreen({
   const [unit, setUnit] = useState<QuantityUnit>(availableUnits[0]);
   const [isFavorite, setIsFavorite] = useState(!!food.isFavorite);
 
-  const grams = convertToGrams(quantity, unit, food.pieceGrams);
+  const grams = convertToGrams(quantity, unit, resolvePieceGrams(food));
   const ratio = grams / 100;
   const n = food.nutrientsPer100g;
 
@@ -101,7 +107,16 @@ export function FoodDetailScreen({
         </label>
         <label>
           Birim
-          <select value={unit} onChange={(e) => setUnit(e.target.value as QuantityUnit)}>
+          <select
+            value={unit}
+            onChange={(e) => {
+              const nextUnit = e.target.value as QuantityUnit;
+              // "100" taşınırsa "100 adet elma" gibi saçma değerler kalır — birim
+              // değişince miktarı o birime makul bir varsayılana sıfırla.
+              setQuantity(nextUnit === 'adet' ? 1 : 100);
+              setUnit(nextUnit);
+            }}
+          >
             {availableUnits.map((value) => (
               <option key={value} value={value}>
                 {UNIT_LABELS[value]}
