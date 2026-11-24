@@ -24,6 +24,10 @@ export interface Food {
   usageCount: number;
   lastUsedAt?: number;
   isFavorite?: boolean;
+  /** True for liquids (su, çorba, süt...): birim seçimi ml/bardak/kaşık gösterir, g/adet değil. */
+  isLiquid?: boolean;
+  /** Tane ile ölçülen katı besinler için (elma, yumurta...): set edilirse birim seçimine "adet" eklenir. */
+  pieceGrams?: number;
 }
 
 export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'other';

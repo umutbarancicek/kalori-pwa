@@ -1,5 +1,26 @@
 import { describe, expect, test } from 'vitest';
-import { convertToGrams, UNIT_LABELS } from './unitConversion';
+import { convertToGrams, getAvailableUnits, UNIT_LABELS } from './unitConversion';
+import type { Food } from '../db/schema';
+
+function makeFood(overrides: Partial<Food>): Food {
+  return {
+    id: '1',
+    name: 'Test',
+    nutrientsPer100g: {
+      kcal: 0,
+      protein: 0,
+      carb: 0,
+      sugar: 0,
+      fat: 0,
+      satFat: 0,
+      fiber: 0,
+      salt: 0,
+    },
+    source: 'bulk',
+    usageCount: 0,
+    ...overrides,
+  };
+}
 
 describe('convertToGrams', () => {
   test('g birimi aynen döner', () => {
@@ -35,5 +56,29 @@ describe('convertToGrams', () => {
     expect(UNIT_LABELS.g).toBe('g');
     expect(UNIT_LABELS.ml).toBe('ml');
     expect(UNIT_LABELS.bardak).toBeTruthy();
+  });
+
+  test('adet birimi pieceGrams ile grama çevrilir', () => {
+    expect(convertToGrams(2, 'adet', 150)).toBe(300);
+  });
+});
+
+describe('getAvailableUnits', () => {
+  test('katı besin (varsayılan) sadece g döner', () => {
+    const food = makeFood({});
+    expect(getAvailableUnits(food)).toEqual(['g']);
+  });
+
+  test('pieceGrams tanımlı katı besin g + adet döner', () => {
+    const food = makeFood({ pieceGrams: 150 });
+    expect(getAvailableUnits(food)).toEqual(['g', 'adet']);
+  });
+
+  test('sıvı besin ml ve hacim birimlerini döner, g/adet döndürmez', () => {
+    const food = makeFood({ isLiquid: true });
+    const units = getAvailableUnits(food);
+    expect(units).toEqual(['ml', 'bardak', 'kupa', 'yemek_kasigi', 'tatli_kasigi', 'cay_kasigi']);
+    expect(units).not.toContain('g');
+    expect(units).not.toContain('adet');
   });
 });

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { AppDatabase } from '../db/database';
 import { toggleFavorite } from '../db/foodRepository';
 import { addDiaryEntry, resolveQuantityGrams } from '../domain/diaryService';
-import { convertToGrams, UNIT_LABELS, type QuantityUnit } from '../domain/unitConversion';
+import { convertToGrams, getAvailableUnits, UNIT_LABELS, type QuantityUnit } from '../domain/unitConversion';
 import type { Food, MealType } from '../db/schema';
 
 interface FoodDetailScreenProps {
@@ -52,10 +52,11 @@ export function FoodDetailScreen({
   const [quantity, setQuantity] = useState(
     () => initialQuantityGrams ?? resolveQuantityGrams(undefined, food),
   );
-  const [unit, setUnit] = useState<QuantityUnit>('g');
+  const availableUnits = getAvailableUnits(food);
+  const [unit, setUnit] = useState<QuantityUnit>(availableUnits[0]);
   const [isFavorite, setIsFavorite] = useState(!!food.isFavorite);
 
-  const grams = convertToGrams(quantity, unit);
+  const grams = convertToGrams(quantity, unit, food.pieceGrams);
   const ratio = grams / 100;
   const n = food.nutrientsPer100g;
 
@@ -101,9 +102,9 @@ export function FoodDetailScreen({
         <label>
           Birim
           <select value={unit} onChange={(e) => setUnit(e.target.value as QuantityUnit)}>
-            {Object.entries(UNIT_LABELS).map(([value, label]) => (
+            {availableUnits.map((value) => (
               <option key={value} value={value}>
-                {label}
+                {UNIT_LABELS[value]}
               </option>
             ))}
           </select>
