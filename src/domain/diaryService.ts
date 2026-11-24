@@ -111,9 +111,19 @@ export async function updateDiaryEntryQuantity(
   const food = await db.foods.get(entry.foodId);
   const snapshotNutrients = food
     ? scaleNutrients(food.nutrientsPer100g, quantityGrams)
-    : // Food was deleted since this entry was logged — scale the entry's own
-      // snapshot by the ratio of new/old quantity rather than losing the data.
-      multiplyNutrients(entry.snapshotNutrients, quantityGrams / entry.quantityGrams);
+    : entry.label
+      ? // Quick kcal-only entry: quantityGrams IS the kcal value (see
+        // addQuickKcalEntry), so set it directly instead of scaling by a
+        // ratio that would divide by zero once the entry has been edited
+        // down to 0.
+        { ...ZERO_NUTRIENTS, kcal: quantityGrams }
+      : // Food was deleted since this entry was logged — scale the entry's own
+        // snapshot by the ratio of new/old quantity rather than losing the
+        // data. Guard the zero-quantity edge case the same way.
+        multiplyNutrients(
+          entry.snapshotNutrients,
+          entry.quantityGrams > 0 ? quantityGrams / entry.quantityGrams : 0,
+        );
   const updated: DiaryEntry = { ...entry, quantityGrams, snapshotNutrients };
   await db.diaryEntries.put(updated);
   return updated;

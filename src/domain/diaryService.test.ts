@@ -230,4 +230,13 @@ describe('diaryService', () => {
     const updated = await updateDiaryEntryQuantity(db, entry.id, 300);
     expect(updated.snapshotNutrients.kcal).toBe(300);
   });
+
+  test('updateDiaryEntryQuantity hızlı kcal kaydı 0 kcal\'e düşürülüp tekrar düzenlense NaN/Infinity üretmez', async () => {
+    const entry = await addQuickKcalEntry(db, 250, '2026-11-23');
+    const zeroed = await updateDiaryEntryQuantity(db, entry.id, 0);
+    expect(zeroed.snapshotNutrients.kcal).toBe(0);
+    const updated = await updateDiaryEntryQuantity(db, entry.id, 300);
+    expect(updated.snapshotNutrients.kcal).toBe(300);
+    expect(Number.isFinite(updated.snapshotNutrients.kcal)).toBe(true);
+  });
 });
